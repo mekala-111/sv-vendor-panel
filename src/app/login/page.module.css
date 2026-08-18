@@ -1,0 +1,96 @@
+.wrap {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 36px 32px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.logo {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.brandName {
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  line-height: 1.1;
+}
+
+.brandSub {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+}
+
+.title {
+  margin: 0 0 4px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.subtitle {
+  margin: 0 0 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.error {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--red);
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 18px;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.submit {
+  width: 100%;
+  padding: 12px;
+}
+
+@media (max-width: 480px) {
+  .wrap {
+    align-items: flex-start;
+    padding: 16px;
+    padding-top: 40px;
+  }
+
+  .card {
+    padding: 24px 20px;
+  }
+}
