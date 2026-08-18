@@ -1,0 +1,68 @@
+:root {
+  --bg: #FAF8F6;
+  --fg: #211A15;
+  --surface: #FFFFFF;
+  --border: #ECE5DE;
+  --border-soft: #F3EEE9;
+  --border-dashed: #D8CFC7;
+  --muted: #8A7E76;
+  --muted-strong: #6E635B;
+  --dark: #191310;
+
+  --accent: #F5820B;
+  --accent-soft: #FCEEE0;
+
+  --green: #1E9E5A;
+  --green-soft: rgba(30, 158, 90, 0.12);
+  --red: #E4362B;
+  --red-soft: rgba(228, 54, 43, 0.12);
+  --yellow: #E0A324;
+  --yellow-soft: rgba(224, 163, 36, 0.12);
+  --blue: #3E7BD1;
+  --blue-soft: rgba(62, 123, 209, 0.12);
+  --purple: #8A5CF5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-manrope), Manrope, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+@media (max-width: 900px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-dashed);
+  border-radius: 4px;
+}
