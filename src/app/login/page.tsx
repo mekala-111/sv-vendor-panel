@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             type="email"
             autoComplete="email"
             required
-            defaultValue="contact@svevents.in"
+            defaultValue="demo-vendor@svlive.in"
             className={`${ui.input} ${styles.field}`}
           />
 
