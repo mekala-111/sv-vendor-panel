@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { Badge } from "@/components/Badge";
 import ui from "@/components/ui.module.css";
-import {
-  revenueBars,
-  notifications,
-  TONES,
-} from "@/lib/data";
+import { revenueBars, TONES } from "@/lib/data";
 import { fetchDashboardData } from "@/lib/hooks/useDashboard";
+import { fetchNotifications } from "@/lib/hooks/useNotifications";
 import styles from "./page.module.css";
+
+const NOTIF_COLORS: Record<string, string> = {
+  PAYMENT_SUCCESSFUL: "#1E9E5A",
+  PAYMENT_FAILED: "#E4362B",
+  EVENT_LIVE: "#E4362B",
+  EVENT_PUBLISHED: "#3E7BD1",
+  EVENT_CREATED: "#3E7BD1",
+  YOUTUBE_CONNECTED: "#3E7BD1",
+  YOUTUBE_ERROR: "#E4362B",
+};
 
 const RECENT_COLS = "2fr 1.3fr 1.3fr 1fr 0.8fr";
 
@@ -17,7 +24,10 @@ const RECENT_COLS = "2fr 1.3fr 1.3fr 1fr 0.8fr";
  */
 export default async function DashboardPage() {
   // Fetch real data from backend
-  const dashboard = await fetchDashboardData();
+  const [dashboard, notifications] = await Promise.all([
+    fetchDashboardData(),
+    fetchNotifications({ limit: 5 }).catch(() => []),
+  ]);
 
   // Format date for display
   const now = new Date();
@@ -29,13 +39,13 @@ export default async function DashboardPage() {
     {
       label: "Total Customers",
       value: dashboard.stats.totalCustomers.toString(),
-      delta: "↗ " + (Math.random() * 25).toFixed(1) + "%",
+      delta: "",
       color: TONES.blue.color,
     },
     {
       label: "Total Events",
       value: dashboard.stats.totalEvents.toString(),
-      delta: "↗ " + (Math.random() * 25).toFixed(1) + "%",
+      delta: "",
       color: TONES.blue.color,
     },
     {
@@ -47,19 +57,19 @@ export default async function DashboardPage() {
     {
       label: "Upcoming Events",
       value: dashboard.stats.upcomingEvents.toString(),
-      delta: "↗ " + (Math.random() * 25).toFixed(1) + "%",
+      delta: "",
       color: TONES.yellow.color,
     },
     {
       label: "Completed Events",
       value: dashboard.stats.completedEvents.toString(),
-      delta: "↗ " + (Math.random() * 25).toFixed(1) + "%",
+      delta: "",
       color: TONES.green.color,
     },
     {
       label: "Monthly Revenue",
       value: `₹${(dashboard.stats.monthlyRevenue / 100000).toFixed(2)}L`,
-      delta: "↗ " + (Math.random() * 25).toFixed(1) + "%",
+      delta: "",
       color: "#F58220",
     },
   ];
@@ -93,7 +103,7 @@ export default async function DashboardPage() {
   const upcomingEvents = dashboard.recentEvents
     .filter((e) => e.status === "UPCOMING")
     .map((e) => {
-      const date = new Date(e.startTime || Date.now());
+      const date = new Date(e.startTime || now.getTime());
       return {
         month: date.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
         day: date.getDate().toString(),
@@ -111,7 +121,7 @@ export default async function DashboardPage() {
             Good morning, {dashboard.vendor.companyName}! 👋
           </h1>
           <div className={styles.subGreeting}>
-            Here's what's happening with your events today.
+            Here&apos;s what&apos;s happening with your events today.
           </div>
         </div>
         <div className={styles.dateBadge}>{dateRange}</div>
@@ -272,15 +282,17 @@ export default async function DashboardPage() {
           <div className={ui.viewAll}>View All</div>
         </div>
         {notifications.length > 0 ? (
-          notifications.map((n, i) => (
-            <div key={i} className={styles.notifRow}>
+          notifications.map((n) => (
+            <div key={n.id} className={styles.notifRow}>
               <div
                 className={styles.notifDot}
-                style={{ background: n.color }}
+                style={{ background: NOTIF_COLORS[n.type] ?? "#8A7E76" }}
               />
               <div>
-                <div className={styles.notifText}>{n.text}</div>
-                <div className={styles.notifTime}>{n.time}</div>
+                <div className={styles.notifText}>{n.title || n.message}</div>
+                <div className={styles.notifTime}>
+                  {new Date(n.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </div>
               </div>
             </div>
           ))

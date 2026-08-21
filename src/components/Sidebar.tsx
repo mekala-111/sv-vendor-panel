@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { walletBalance } from "@/lib/data";
 import styles from "./Sidebar.module.css";
 
 const NAV_ITEMS = [
@@ -21,7 +20,7 @@ const NAV_ITEMS = [
   { label: "Settings", href: "/vendor/settings" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ walletBalance }: { walletBalance: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
