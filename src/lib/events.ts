@@ -13,10 +13,46 @@ function str(formData: FormData, key: string): string {
   return String(formData.get(key) ?? "").trim();
 }
 
+function bool(formData: FormData, key: string): boolean {
+  return formData.get(key) === "on" || formData.get(key) === "true";
+}
+
 /** Combines a date input ("2026-05-24") and a time input ("19:00") into an ISO datetime the backend can coerce. */
 function combineDateTime(date: string, time: string): string | undefined {
   if (!date) return undefined;
   return time ? `${date}T${time}:00` : `${date}T00:00:00`;
+}
+
+const MAX_LOGO_BYTES = 500 * 1024;
+const MAX_COVER_BYTES = 4 * 1024 * 1024;
+const MAX_GALLERY_BYTES = 4 * 1024 * 1024;
+const MAX_GALLERY_COUNT = 10;
+
+/** Reads a single file field into a data: URL (no S3 configured on the backend yet). Returns undefined when no file was chosen. */
+async function fileToDataUrl(value: FormDataEntryValue | null, maxBytes: number): Promise<string | { error: string } | undefined> {
+  if (!(value instanceof File) || value.size === 0) return undefined;
+  if (value.size > maxBytes) {
+    return { error: `exceeds the maximum size of ${Math.round(maxBytes / 1024)}KB` };
+  }
+  const buffer = Buffer.from(await value.arrayBuffer());
+  return `data:${value.type || "image/jpeg"};base64,${buffer.toString("base64")}`;
+}
+
+/** Reads a multi-file field into data: URLs. Returns [] when nothing was chosen. */
+async function filesToDataUrls(values: FormDataEntryValue[]): Promise<string[] | { error: string }> {
+  const files = values.filter((v): v is File => v instanceof File && v.size > 0);
+  if (files.length > MAX_GALLERY_COUNT) {
+    return { error: `You can upload at most ${MAX_GALLERY_COUNT} gallery images.` };
+  }
+  const urls: string[] = [];
+  for (const file of files) {
+    if (file.size > MAX_GALLERY_BYTES) {
+      return { error: `Gallery image "${file.name}" exceeds the maximum size of ${Math.round(MAX_GALLERY_BYTES / 1024 / 1024)}MB.` };
+    }
+    const buffer = Buffer.from(await file.arrayBuffer());
+    urls.push(`data:${file.type || "image/jpeg"};base64,${buffer.toString("base64")}`);
+  }
+  return urls;
 }
 
 export interface CreateEventResult {
@@ -41,14 +77,36 @@ export async function createEventAction(formData: FormData): Promise<CreateEvent
   const eventDate = str(formData, "eventDate");
   const startTime = str(formData, "startTime");
   const location = str(formData, "location");
+  const googleMapsUrl = str(formData, "googleMapsUrl");
   const pageTitle = str(formData, "pageTitle");
+  const metaTitle = str(formData, "metaTitle");
+  const metaDescription = str(formData, "metaDescription");
   const description = str(formData, "description");
-  const coverImage = str(formData, "coverImage");
   const liveTiming = str(formData, "liveTiming");
   const themeId = str(formData, "themeId");
+  const teaserUrl = str(formData, "teaserUrl");
+  const scrollMessage = str(formData, "scrollMessage");
+  const remarks1 = str(formData, "remarks1");
+  const remarks2 = str(formData, "remarks2");
+  const fontFamily = str(formData, "fontFamily");
+  const fontColor = str(formData, "fontColor");
+  const whatsappNumber = str(formData, "whatsappNumber");
+  const accessPin = str(formData, "accessPin");
   const youtubeChannelId = str(formData, "youtubeChannelId");
   const youtubeVideoId = str(formData, "youtubeVideoId");
   const youtubeLiveUrl = str(formData, "youtubeLiveUrl");
+  const youtubeLiveKey = str(formData, "youtubeLiveKey");
+
+  const coverImage = await fileToDataUrl(formData.get("coverImage"), MAX_COVER_BYTES);
+  if (coverImage && typeof coverImage === "object") return { ok: false, error: `Cover image ${coverImage.error}.` };
+  const logoImage = await fileToDataUrl(formData.get("logoImage"), MAX_LOGO_BYTES);
+  if (logoImage && typeof logoImage === "object") return { ok: false, error: `Logo ${logoImage.error}.` };
+  const customImage = await fileToDataUrl(formData.get("customImage"), MAX_LOGO_BYTES);
+  if (customImage && typeof customImage === "object") return { ok: false, error: `Custom image ${customImage.error}.` };
+  const whatsappImage = await fileToDataUrl(formData.get("whatsappImage"), MAX_LOGO_BYTES);
+  if (whatsappImage && typeof whatsappImage === "object") return { ok: false, error: `WhatsApp image ${whatsappImage.error}.` };
+  const galleryImages = await filesToDataUrls(formData.getAll("galleryImages"));
+  if (!Array.isArray(galleryImages)) return { ok: false, error: galleryImages.error };
 
   let event: Event;
   try {
@@ -60,10 +118,29 @@ export async function createEventAction(formData: FormData): Promise<CreateEvent
       ...(eventDate ? { eventDate } : {}),
       ...(eventDate && startTime ? { startTime: combineDateTime(eventDate, startTime) } : {}),
       ...(location ? { location } : {}),
+      ...(googleMapsUrl ? { googleMapsUrl } : {}),
       ...(pageTitle ? { pageTitle } : {}),
+      ...(metaTitle ? { metaTitle } : {}),
+      ...(metaDescription ? { metaDescription } : {}),
       ...(coverImage ? { coverImage } : {}),
+      ...(logoImage ? { logoImage } : {}),
+      ...(customImage ? { customImage } : {}),
+      ...(whatsappImage ? { whatsappImage } : {}),
+      ...(galleryImages.length ? { galleryImages } : {}),
       ...(liveTiming ? { liveTiming } : {}),
       ...(themeId ? { themeId } : {}),
+      ...(teaserUrl ? { teaserUrl } : {}),
+      ...(scrollMessage ? { scrollMessage } : {}),
+      ...(remarks1 ? { remarks1 } : {}),
+      ...(remarks2 ? { remarks2 } : {}),
+      ...(fontFamily ? { fontFamily } : {}),
+      ...(fontColor ? { fontColor } : {}),
+      ...(accessPin ? { accessPin } : {}),
+      ...(whatsappNumber ? { whatsappNumber } : {}),
+      whatsappEnabled: bool(formData, "whatsappEnabled"),
+      showWatchLive: bool(formData, "showWatchLive"),
+      showSocialShare: bool(formData, "showSocialShare"),
+      isPublic: bool(formData, "isPublic"),
     });
   } catch (error) {
     return { ok: false, error: error instanceof ApiError ? error.message : "Failed to create event." };
@@ -88,6 +165,7 @@ export async function createEventAction(formData: FormData): Promise<CreateEvent
         youtubeChannelId,
         ...(youtubeVideoId ? { youtubeVideoId } : {}),
         ...(youtubeLiveUrl ? { youtubeLiveUrl } : {}),
+        ...(youtubeLiveKey ? { youtubeLiveKey } : {}),
       });
     } catch (error) {
       return {
