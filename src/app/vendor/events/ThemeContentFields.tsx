@@ -83,14 +83,19 @@ export function ThemeContentFields({
         if (field.type === "subEvents") {
           const showSubEvents = content.showSubEvents !== false;
           const defaultValue = Array.isArray(content.subEvents)
-            ? (content.subEvents as { title?: string; date?: string | null; time?: string | null; place?: string | null }[]).map(
-                (row) => ({
-                  title: row.title ?? "",
-                  date: row.date ?? undefined,
-                  time: normalizeTimeForInput(String(row.time ?? "")),
-                  place: row.place ?? undefined,
-                })
-              )
+            ? (content.subEvents as {
+                title?: string;
+                date?: string | null;
+                time?: string | null;
+                place?: string | null;
+                image?: string | null;
+              }[]).map((row) => ({
+                title: row.title ?? "",
+                date: row.date ?? undefined,
+                time: normalizeTimeForInput(String(row.time ?? "")),
+                place: row.place ?? undefined,
+                image: row.image ?? undefined,
+              }))
             : [];
           return (
             <div key={field.key}>

@@ -284,7 +284,7 @@ export function GalleryImagesField({
   );
 }
 
-type SubEventRow = { title: string; date: string; time: string; place: string };
+type SubEventRow = { title: string; date: string; time: string; place: string; image: string };
 
 export function SubEventsField({
   name = "subEvents",
@@ -300,18 +300,43 @@ export function SubEventsField({
   const [rows, setRows] = useState<SubEventRow[]>(() =>
     (defaultValue.length
       ? defaultValue
-      : [{ title: "", date: "", time: "", place: "" }]
+      : [{ title: "", date: "", time: "", place: "", image: "" }]
     ).map((r) => ({
       title: String(r.title ?? ""),
       date: String(r.date ?? ""),
       time: normalizeTimeForInput(String(r.time ?? "")),
       place: String(r.place ?? ""),
+      image: String(r.image ?? ""),
     }))
   );
+  const [imageError, setImageError] = useState<Record<number, string>>({});
 
   function updateRows(next: SubEventRow[]) {
     setRows(next);
     onValueChange?.(next);
+  }
+
+  async function onSubEventImage(index: number, file: File | undefined) {
+    if (!file) return;
+    const maxBytes = 4 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setImageError((prev) => ({
+        ...prev,
+        [index]: `File too large (${Math.round(file.size / 1024)}KB > 4MB).`,
+      }));
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setImageError((prev) => ({ ...prev, [index]: "Please choose an image file." }));
+      return;
+    }
+    setImageError((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+    const dataUrl = await readAsDataUrl(file);
+    updateRows(rows.map((r, i) => (i === index ? { ...r, image: dataUrl } : r)));
   }
 
   return (
@@ -383,6 +408,38 @@ export function SubEventsField({
                 )
               }
             />
+            <div className={styles.subEventImageBlock}>
+              <div className={ui.label} style={{ marginBottom: 6 }}>
+                Custom image
+              </div>
+              <div className={styles.fieldHint}>Optional · JPEG/PNG/WebP · up to 4MB</div>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                className={ui.input}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  void onSubEventImage(index, file);
+                  e.target.value = "";
+                }}
+              />
+              {imageError[index] ? <div className={styles.fieldError}>{imageError[index]}</div> : null}
+              {row.image ? (
+                <div className={styles.thumbRow}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={row.image} alt="" className={styles.thumb} />
+                  <button
+                    type="button"
+                    className={ui.btnOutlineSm}
+                    onClick={() =>
+                      updateRows(rows.map((r, i) => (i === index ? { ...r, image: "" } : r)))
+                    }
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
         ))}
       </div>
@@ -392,7 +449,7 @@ export function SubEventsField({
           className={ui.btnOutlineSm}
           style={{ marginTop: 10 }}
           onClick={() =>
-            updateRows([...rows, { title: "", date: "", time: "", place: "" }])
+            updateRows([...rows, { title: "", date: "", time: "", place: "", image: "" }])
           }
         >
           + Add sub event

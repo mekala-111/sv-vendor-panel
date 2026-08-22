@@ -67,6 +67,7 @@ const SAMPLE_WEDDING = {
   remarks2: "Grandparents: With love and blessings\nUncles & Aunts: We welcome you with open hearts",
   subEvents: [
     { title: "Haldi", date: "14 Dec 2026", time: "10:00 AM", place: "Family Home" },
+    { title: "Mehendi", date: "14 Dec 2026", time: "4:00 PM", place: "Courtyard" },
     { title: "Wedding Ceremony", date: "15 Dec 2026", time: "6:00 PM", place: "Grand Convention Hall" },
   ],
 };
@@ -241,9 +242,25 @@ export function buildEventThemePreviewPayload(
   if (opts?.scrollMessage && !event.scrollMessage) event.scrollMessage = opts.scrollMessage;
 
   const eventDate = str("eventDate");
+  const eventTime = str("eventTime");
   if (eventDate) {
     event.eventDate = eventDate;
-    event.startTime = `${eventDate}T18:00:00.000Z`;
+    // Prefer vendor-entered time so stream countdown matches Theme Content fields.
+    const timePart = (() => {
+      if (!eventTime) return "18:00:00";
+      const m = eventTime.trim().match(/^(\d{1,2}):(\d{2})(?:\s*([AaPp][Mm]))?/);
+      if (!m) return "18:00:00";
+      let h = Number(m[1]);
+      const min = Number(m[2]);
+      const ampm = m[3]?.toUpperCase();
+      if (ampm === "PM" && h < 12) h += 12;
+      if (ampm === "AM" && h === 12) h = 0;
+      if (!ampm && h <= 23) {
+        /* already 24h from <input type="time"> */
+      }
+      return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:00`;
+    })();
+    event.startTime = `${eventDate}T${timePart}`;
   }
 
   const place = str("eventPlace");
@@ -276,10 +293,21 @@ export function buildEventThemePreviewPayload(
         }))
       : base.media;
 
+  const youtubeLiveUrl = str("youtubeLiveUrl") || str("teaserUrl");
+  const youtube = youtubeLiveUrl
+    ? {
+        ...(typeof base.youtube === "object" && base.youtube ? base.youtube : {}),
+        liveUrl: youtubeLiveUrl,
+        videoId: null,
+        status: "SCHEDULED",
+      }
+    : base.youtube;
+
   return {
     ...base,
     event,
     media,
+    youtube,
     publicPath: "/event/draft",
   };
 }

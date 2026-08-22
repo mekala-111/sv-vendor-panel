@@ -22,7 +22,13 @@ function parseGallery(raw: string | undefined): string[] | undefined {
 }
 
 function parseSubEvents(raw: string | undefined):
-  | { title: string; date?: string | null; time?: string | null; place?: string | null }[]
+  | {
+      title: string;
+      date?: string | null;
+      time?: string | null;
+      place?: string | null;
+      image?: string | null;
+    }[]
   | undefined {
   if (!raw) return undefined;
   try {
@@ -34,6 +40,7 @@ function parseSubEvents(raw: string | undefined):
         date: String(row?.date ?? "").trim() || null,
         time: String(row?.time ?? "").trim() || null,
         place: String(row?.place ?? "").trim() || null,
+        image: String(row?.image ?? "").trim() || null,
       }))
       .filter((row) => row.title.length > 0)
       .slice(0, 20);
