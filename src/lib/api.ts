@@ -1,7 +1,13 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cookieSecureFlag } from "@/lib/session-cookies";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "http://localhost:4000/api";
+const VENDOR_BASE =
+  process.env.NEXT_PUBLIC_VENDOR_PANEL_URL ||
+  process.env.VENDOR_PANEL_URL ||
+  process.env.VENDOR_BASE_URL ||
+  "";
 
 export const AUTH_COOKIE = "sv_vendor_access";
 export const REFRESH_COOKIE = "sv_vendor_refresh";
@@ -16,6 +22,16 @@ type ApiEnvelope<T> = {
 export async function getAccessToken(): Promise<string | null> {
   const store = await cookies();
   return store.get(AUTH_COOKIE)?.value ?? null;
+}
+
+function sessionCookieOpts(maxAge = 60 * 60 * 24 * 30) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    path: "/",
+    secure: cookieSecureFlag(VENDOR_BASE),
+    maxAge,
+  };
 }
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -34,39 +50,43 @@ async function refreshAccessToken(): Promise<string | null> {
     refreshToken?: string;
   }>;
   if (!res.ok || json.success === false || !json.data?.accessToken) {
-    store.delete(AUTH_COOKIE);
-    store.delete(REFRESH_COOKIE);
-    store.delete("vendor_session");
+    try {
+      store.delete(AUTH_COOKIE);
+      store.delete(REFRESH_COOKIE);
+      store.delete("vendor_session");
+    } catch {
+      /* RSC may not allow cookie mutation */
+    }
     return null;
   }
 
-  store.set(AUTH_COOKIE, json.data.accessToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    secure: process.env.NODE_ENV === "production",
-  });
-  if (json.data.refreshToken) {
-    store.set(REFRESH_COOKIE, json.data.refreshToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: process.env.NODE_ENV === "production",
-    });
+  try {
+    const opts = sessionCookieOpts();
+    store.set(AUTH_COOKIE, json.data.accessToken, opts);
+    if (json.data.refreshToken) {
+      store.set(REFRESH_COOKIE, json.data.refreshToken, opts);
+    }
+  } catch {
+    /* proxy/middleware will persist on next navigation */
   }
   return json.data.accessToken;
 }
 
 export async function apiFetch<T>(
   path: string,
-  options: RequestInit & { auth?: boolean; _retried?: boolean } = {}
+  options: RequestInit & {
+    auth?: boolean;
+    _retried?: boolean;
+    /** Used after refresh when cookies() cannot be mutated in RSC. */
+    accessTokenOverride?: string;
+  } = {}
 ): Promise<{ data: T; meta?: Record<string, unknown> }> {
-  const { auth = true, headers, _retried, ...rest } = options;
+  const { auth = true, headers, _retried, accessTokenOverride, ...rest } = options;
   const h = new Headers(headers);
   h.set("Content-Type", "application/json");
 
   if (auth) {
-    const token = await getAccessToken();
+    const token = accessTokenOverride ?? (await getAccessToken());
     if (token) h.set("Authorization", `Bearer ${token}`);
   }
 
@@ -79,7 +99,7 @@ export async function apiFetch<T>(
   if (auth && res.status === 401 && !_retried) {
     const nextToken = await refreshAccessToken();
     if (nextToken) {
-      return apiFetch<T>(path, { ...options, _retried: true });
+      return apiFetch<T>(path, { ...options, _retried: true, accessTokenOverride: nextToken });
     }
     redirect("/login?error=session");
   }

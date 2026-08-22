@@ -3,6 +3,13 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { apiFetch, apiLogin, AUTH_COOKIE, REFRESH_COOKIE } from "./api";
+import { cookieSecureFlag } from "./session-cookies";
+
+const VENDOR_BASE =
+  process.env.NEXT_PUBLIC_VENDOR_PANEL_URL ||
+  process.env.VENDOR_PANEL_URL ||
+  process.env.VENDOR_BASE_URL ||
+  "";
 
 function rethrowRedirect(err: unknown) {
   if (
@@ -31,29 +38,19 @@ export async function login(formData: FormData) {
       redirect("/login?error=role");
     }
     const store = await cookies();
-    const maxAge = remember ? 60 * 60 * 24 * 30 : undefined;
-    store.set(AUTH_COOKIE, data.accessToken, {
+    // Always persist session cookies so refresh can renew the 15m access JWT.
+    const maxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7;
+    const cookieOpts = {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: "lax" as const,
       path: "/",
-      secure: process.env.NODE_ENV === "production",
-      ...(maxAge ? { maxAge } : {}),
-    });
-    store.set(REFRESH_COOKIE, data.refreshToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: process.env.NODE_ENV === "production",
-      ...(maxAge ? { maxAge } : {}),
-    });
+      secure: cookieSecureFlag(VENDOR_BASE),
+      maxAge,
+    };
+    store.set(AUTH_COOKIE, data.accessToken, cookieOpts);
+    store.set(REFRESH_COOKIE, data.refreshToken, cookieOpts);
     // legacy cookie name kept so old proxy matcher still works during transition
-    store.set("vendor_session", data.user.email, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: process.env.NODE_ENV === "production",
-      ...(maxAge ? { maxAge } : {}),
-    });
+    store.set("vendor_session", data.user.email, cookieOpts);
   } catch (err) {
     rethrowRedirect(err);
     redirect("/login?error=1");
