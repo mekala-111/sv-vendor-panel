@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { vendorAbsoluteUrl } from "@/lib/vendor-origin";
 
 export function proxy(request: NextRequest) {
   const access = request.cookies.get("sv_vendor_access")?.value;
@@ -9,10 +10,10 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/vendor") && !authed) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(vendorAbsoluteUrl("/login", request));
   }
   if ((pathname === "/login" || pathname === "/") && authed) {
-    return NextResponse.redirect(new URL("/vendor/dashboard", request.url));
+    return NextResponse.redirect(vendorAbsoluteUrl("/vendor/dashboard", request));
   }
 }
 
