@@ -11,6 +11,7 @@ import {
 import { ThemeContentEditor } from "@/app/vendor/events/ThemeContentEditor";
 import type { VendorThemePreview } from "@/lib/theme-preview-payload";
 import { resolveThemeFields } from "@/lib/theme-config";
+import { withResolvedThemeSectionToggles } from "@/lib/theme-section-toggles";
 import styles from "@/app/vendor/events/new/wizard.module.css";
 import {
   fetchEventCreationPayment,
@@ -209,7 +210,7 @@ export default async function InvitationDetailPage(props: PageProps<"/vendor/inv
               <ThemeContentEditor
                 eventId={invitationId}
                 fields={themeContentFields}
-                raw={raw as Record<string, unknown>}
+                raw={withResolvedThemeSectionToggles(raw as Record<string, unknown>)}
                 theme={appliedTheme as VendorThemePreview | null}
                 formAction={saveInvitationThemeContentAction}
                 title="Theme content"

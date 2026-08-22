@@ -84,19 +84,27 @@ export function buildThemeContentPayload(
   if (galleryImages) payload.galleryImages = galleryImages;
   const subEvents = parseSubEvents(optionalStr(formData, "subEvents"));
   if (subEvents) payload.subEvents = subEvents;
-  const showSubEvents = String(formData.get("showSubEvents") ?? "true");
-  payload.showSubEvents = showSubEvents !== "false";
-  if (formData.has("showInvitationCard")) {
-    payload.showInvitationCard = String(formData.get("showInvitationCard")) !== "false";
+
+  // Explicit string flags from hidden inputs ("true" / "false").
+  if (formData.has("showSubEvents")) {
+    payload.showSubEvents = String(formData.get("showSubEvents")).toLowerCase() === "true";
   }
+  if (formData.has("showInvitationCard")) {
+    payload.showInvitationCard = String(formData.get("showInvitationCard")).toLowerCase() === "true";
+  }
+
   if (payload.eventPlace) payload.location = payload.eventPlace;
 
   if (kind === "live") {
     const youtubeLiveUrl = optionalStr(formData, "youtubeLiveUrl");
     const teaserUrl = optionalStr(formData, "teaserUrl");
+    // Prefer the live stream ID — teaser is only a fallback (wrong ID causes
+    // "Video unavailable" on the public page while preview still looks fine).
     const videoId =
-      (teaserUrl ? extractYouTubeId(teaserUrl) : undefined) ||
-      (youtubeLiveUrl ? extractYouTubeId(youtubeLiveUrl) : undefined);
+      (youtubeLiveUrl ? extractYouTubeId(youtubeLiveUrl) : undefined) ||
+      (teaserUrl ? extractYouTubeId(teaserUrl) : undefined);
+    if (youtubeLiveUrl) payload.youtubeLiveUrl = youtubeLiveUrl;
+    if (teaserUrl) payload.teaserUrl = teaserUrl;
     if (videoId) payload.youtubeVideoId = videoId;
   }
 

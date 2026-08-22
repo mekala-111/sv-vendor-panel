@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import ui from "@/components/ui.module.css";
 import type { ThemeFieldDef } from "@/lib/theme-config";
 import { normalizeTimeForInput } from "@/lib/time-input";
@@ -25,15 +25,27 @@ function fieldDefaultValue(key: string, raw: Record<string, unknown>, type?: The
   return str;
 }
 
+function coerceBool(value: unknown, defaultValue = true): boolean {
+  if (value === false || value === 0 || value === "0") return false;
+  if (value === true || value === 1 || value === "1") return true;
+  if (typeof value === "string") {
+    const v = value.trim().toLowerCase();
+    if (v === "false" || v === "off" || v === "no") return false;
+    if (v === "true" || v === "on" || v === "yes") return true;
+  }
+  if (value == null) return defaultValue;
+  return Boolean(value);
+}
+
 export function initThemeContent(raw: Record<string, unknown>, fields: ThemeFieldDef[]) {
   const content: Record<string, unknown> = {};
   const hasSubEventsField = fields.some((field) => field.type === "subEvents");
   if (hasSubEventsField) {
-    content.showSubEvents = raw.showSubEvents !== false;
+    content.showSubEvents = coerceBool(raw.showSubEvents, true);
   }
   const hasInvitationCardField = fields.some((field) => field.key === "invitationCard");
   if (hasInvitationCardField) {
-    content.showInvitationCard = raw.showInvitationCard !== false;
+    content.showInvitationCard = coerceBool(raw.showInvitationCard, true);
   }
   for (const field of fields) {
     if (field.type === "subEvents") {
@@ -50,26 +62,22 @@ export function initThemeContent(raw: Record<string, unknown>, fields: ThemeFiel
 
 export function ThemeContentFields({
   fields,
-  raw,
+  content,
   onContentChange,
+  raw = {},
 }: {
   fields: ThemeFieldDef[];
-  raw: Record<string, unknown>;
-  onContentChange?: (content: Record<string, unknown>) => void;
+  content: Record<string, unknown>;
+  onContentChange: (content: Record<string, unknown>) => void;
+  /** Optional leftovers for stream-key defaults when not in content yet. */
+  raw?: Record<string, unknown>;
 }) {
-  const [content, setContent] = useState(() => initThemeContent(raw, fields));
-
-  useEffect(() => {
-    setContent(initThemeContent(raw, fields));
-  }, [fields, raw]);
-
-  useEffect(() => {
-    onContentChange?.(content);
-  }, [content, onContentChange]);
-
-  const patch = useCallback((key: string, value: unknown) => {
-    setContent((prev) => ({ ...prev, [key]: value }));
-  }, []);
+  const patch = useCallback(
+    (key: string, value: unknown) => {
+      onContentChange({ ...content, [key]: value });
+    },
+    [content, onContentChange]
+  );
 
   const fieldList = useMemo(() => fields, [fields]);
 
@@ -103,6 +111,8 @@ export function ThemeContentFields({
             : [];
           return (
             <div key={field.key}>
+              {/* Same state as the switch — posted on save without a parent useEffect lag. */}
+              <input type="hidden" name="showSubEvents" value={showSubEvents ? "true" : "false"} />
               <div className={styles.subEventsToggleRow}>
                 <div>
                   <div className={ui.label}>Sub events</div>
@@ -120,7 +130,6 @@ export function ThemeContentFields({
                   <span className={styles.toggleKnob} />
                 </button>
               </div>
-              <input type="hidden" name="showSubEvents" value={showSubEvents ? "true" : "false"} />
               <div style={{ display: showSubEvents ? undefined : "none" }}>
                 <SubEventsField
                   defaultValue={defaultValue}
@@ -152,6 +161,11 @@ export function ThemeContentFields({
             const showInvitationCard = content.showInvitationCard !== false;
             return (
               <div key={field.key}>
+                <input
+                  type="hidden"
+                  name="showInvitationCard"
+                  value={showInvitationCard ? "true" : "false"}
+                />
                 <div className={styles.subEventsToggleRow}>
                   <div>
                     <div className={ui.label}>Invitation card</div>
@@ -169,11 +183,6 @@ export function ThemeContentFields({
                     <span className={styles.toggleKnob} />
                   </button>
                 </div>
-                <input
-                  type="hidden"
-                  name="showInvitationCard"
-                  value={showInvitationCard ? "true" : "false"}
-                />
                 <div style={{ display: showInvitationCard ? undefined : "none" }}>
                   <ImageFileField
                     name={field.key}

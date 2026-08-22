@@ -2,7 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { setInvitationThemeAction, updateInvitationAction } from "@/lib/server-data";
+import {
+  fetchInvitation,
+  setInvitationThemeAction,
+  updateInvitationAction,
+} from "@/lib/server-data";
 import { buildThemeContentPayload } from "@/lib/theme-content-payload";
 
 function rethrowRedirect(err: unknown) {
@@ -15,6 +19,39 @@ function rethrowRedirect(err: unknown) {
   ) {
     throw err;
   }
+}
+
+async function persistInvitationSectionToggles(
+  invitationId: string,
+  payload: Record<string, unknown>
+) {
+  if (payload.showSubEvents === undefined && payload.showInvitationCard === undefined) {
+    return;
+  }
+  const invitation = await fetchInvitation(invitationId);
+  const raw = (invitation?.raw ?? {}) as Record<string, unknown>;
+  const themeConfig =
+    raw.themeConfig && typeof raw.themeConfig === "object"
+      ? (raw.themeConfig as Record<string, unknown>)
+      : null;
+  const themeId = String(themeConfig?.themeId || raw.themeId || "").trim();
+  if (!themeId) return;
+
+  const prevCustom =
+    themeConfig?.customConfig && typeof themeConfig.customConfig === "object"
+      ? (themeConfig.customConfig as Record<string, unknown>)
+      : {};
+
+  await setInvitationThemeAction(invitationId, {
+    themeId,
+    customConfig: {
+      ...prevCustom,
+      ...(payload.showSubEvents !== undefined ? { showSubEvents: payload.showSubEvents } : {}),
+      ...(payload.showInvitationCard !== undefined
+        ? { showInvitationCard: payload.showInvitationCard }
+        : {}),
+    },
+  });
 }
 
 export async function saveInvitationAccessAction(formData: FormData) {
@@ -81,7 +118,9 @@ export async function saveInvitationThemeContentAction(formData: FormData) {
   if (!invitationId) redirect("/vendor/invitations");
 
   try {
-    await updateInvitationAction(invitationId, buildThemeContentPayload(formData));
+    const payload = buildThemeContentPayload(formData);
+    await updateInvitationAction(invitationId, payload);
+    await persistInvitationSectionToggles(invitationId, payload);
   } catch (err) {
     rethrowRedirect(err);
     redirect(`/vendor/invitations/${invitationId}?tab=Theme%20Content&error=1`);

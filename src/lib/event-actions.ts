@@ -6,6 +6,8 @@ import { type EventWizardKind, parseWizardKind, wizardBasePath } from "./event-w
 import {
   createEventAction,
   createInvitationAction,
+  fetchEvent,
+  fetchInvitation,
   publishEventAction,
   publishInvitationAction,
   setEventThemeAction,
@@ -159,8 +161,58 @@ export async function submitThemeContentStep(formData: FormData) {
     const payload = buildThemeContentPayload(formData, kind);
     if (kind === "invitation") {
       await updateInvitationAction(eventId, payload);
+      if (payload.showSubEvents !== undefined || payload.showInvitationCard !== undefined) {
+        const invitation = await fetchInvitation(eventId);
+        const raw = (invitation?.raw ?? {}) as Record<string, unknown>;
+        const themeConfig =
+          raw.themeConfig && typeof raw.themeConfig === "object"
+            ? (raw.themeConfig as Record<string, unknown>)
+            : null;
+        const themeId = String(themeConfig?.themeId || raw.themeId || "").trim();
+        if (themeId) {
+          const prevCustom =
+            themeConfig?.customConfig && typeof themeConfig.customConfig === "object"
+              ? (themeConfig.customConfig as Record<string, unknown>)
+              : {};
+          await setInvitationThemeAction(eventId, {
+            themeId,
+            customConfig: {
+              ...prevCustom,
+              ...(payload.showSubEvents !== undefined ? { showSubEvents: payload.showSubEvents } : {}),
+              ...(payload.showInvitationCard !== undefined
+                ? { showInvitationCard: payload.showInvitationCard }
+                : {}),
+            },
+          });
+        }
+      }
     } else {
       await updateEventAction(eventId, payload);
+      if (payload.showSubEvents !== undefined || payload.showInvitationCard !== undefined) {
+        const event = await fetchEvent(eventId);
+        const raw = (event?.raw ?? {}) as Record<string, unknown>;
+        const themeConfig =
+          raw.themeConfig && typeof raw.themeConfig === "object"
+            ? (raw.themeConfig as Record<string, unknown>)
+            : null;
+        const themeId = String(themeConfig?.themeId || raw.themeId || "").trim();
+        if (themeId) {
+          const prevCustom =
+            themeConfig?.customConfig && typeof themeConfig.customConfig === "object"
+              ? (themeConfig.customConfig as Record<string, unknown>)
+              : {};
+          await setEventThemeAction(eventId, {
+            themeId,
+            customConfig: {
+              ...prevCustom,
+              ...(payload.showSubEvents !== undefined ? { showSubEvents: payload.showSubEvents } : {}),
+              ...(payload.showInvitationCard !== undefined
+                ? { showInvitationCard: payload.showInvitationCard }
+                : {}),
+            },
+          });
+        }
+      }
     }
   } catch (err) {
     rethrowRedirect(err);

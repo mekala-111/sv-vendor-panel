@@ -296,19 +296,20 @@ export function buildEventThemePreviewPayload(
         }))
       : base.media;
 
-  const youtubeLiveUrl = str("youtubeLiveUrl") || str("teaserUrl");
-  const youtube = youtubeLiveUrl
+  const youtubeLiveUrl = str("youtubeLiveUrl");
+  const teaserUrl = str("teaserUrl");
+  const preferredLiveUrl = youtubeLiveUrl || teaserUrl;
+  const youtube = preferredLiveUrl
     ? {
         ...(typeof base.youtube === "object" && base.youtube ? base.youtube : {}),
-        liveUrl: youtubeLiveUrl,
+        liveUrl: preferredLiveUrl,
         videoId: null,
         status: "SCHEDULED",
       }
     : base.youtube;
 
-  // Secondary stream CTA only when a real embed URL exists (avoids duplicate
-  // "Stream starting soon" on admin builds that still render both poster + bottom CTAs).
-  event.showWatchLive = Boolean(youtubeLiveUrl);
+  // Secondary stream CTA only when a real embed URL exists.
+  event.showWatchLive = Boolean(preferredLiveUrl);
 
   const showInvitationCard = content.showInvitationCard !== false;
   event.showInvitationCard = showInvitationCard;

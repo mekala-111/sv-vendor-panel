@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { setEventThemeAction, updateEventAction } from "@/lib/server-data";
+import { fetchEvent, setEventThemeAction, updateEventAction } from "@/lib/server-data";
 import { buildThemeContentPayload } from "@/lib/theme-content-payload";
 
 function rethrowRedirect(err: unknown) {
@@ -15,6 +15,39 @@ function rethrowRedirect(err: unknown) {
   ) {
     throw err;
   }
+}
+
+async function persistSectionToggles(
+  eventId: string,
+  payload: Record<string, unknown>
+) {
+  if (payload.showSubEvents === undefined && payload.showInvitationCard === undefined) {
+    return;
+  }
+  const event = await fetchEvent(eventId);
+  const raw = (event?.raw ?? {}) as Record<string, unknown>;
+  const themeConfig =
+    raw.themeConfig && typeof raw.themeConfig === "object"
+      ? (raw.themeConfig as Record<string, unknown>)
+      : null;
+  const themeId = String(themeConfig?.themeId || raw.themeId || "").trim();
+  if (!themeId) return;
+
+  const prevCustom =
+    themeConfig?.customConfig && typeof themeConfig.customConfig === "object"
+      ? (themeConfig.customConfig as Record<string, unknown>)
+      : {};
+
+  await setEventThemeAction(eventId, {
+    themeId,
+    customConfig: {
+      ...prevCustom,
+      ...(payload.showSubEvents !== undefined ? { showSubEvents: payload.showSubEvents } : {}),
+      ...(payload.showInvitationCard !== undefined
+        ? { showInvitationCard: payload.showInvitationCard }
+        : {}),
+    },
+  });
 }
 
 export async function saveEventAccessAction(formData: FormData) {
@@ -81,7 +114,11 @@ export async function saveThemeContentAction(formData: FormData) {
   if (!eventId) redirect("/vendor/events");
 
   try {
-    await updateEventAction(eventId, buildThemeContentPayload(formData, "live"));
+    const payload = buildThemeContentPayload(formData, "live");
+    await updateEventAction(eventId, payload);
+    // Also store toggles on themeConfig.customConfig — production Event schema may
+    // still strip showSubEvents / showInvitationCard as unknown paths.
+    await persistSectionToggles(eventId, payload);
   } catch (err) {
     rethrowRedirect(err);
     redirect(`/vendor/events/${eventId}?tab=Theme%20Content&error=1`);
