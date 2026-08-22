@@ -189,6 +189,9 @@ export interface EventRecord {
   revenue: string;
   /** Backend UUID when loaded from API */
   _id?: string;
+  themeId?: string | null;
+  showWatchLive?: boolean | null;
+  isPublished?: boolean;
 }
 
 export const events: EventRecord[] = [
@@ -270,28 +273,31 @@ export const eventFontOptions = [
 
 export const eventQuickActions = ["Preview", "Copy Link", "QR Code", "Edit", "Change Theme", "YouTube", "Share"];
 
-export const eventDetailTabs = ["Overview", "YouTube", "Theme", "Event Page", "Viewers", "Recording", "Analytics", "Settings"] as const;
-export type EventDetailTab = (typeof eventDetailTabs)[number];
+export const liveEventDetailTabs = [
+  "Overview",
+  "Theme Content",
+  "Payment",
+  "Event Page",
+] as const;
+export type LiveEventDetailTab = (typeof liveEventDetailTabs)[number];
+
+/** @deprecated Use liveEventDetailTabs for live events */
+export const eventDetailTabs = liveEventDetailTabs;
+export type EventDetailTab = LiveEventDetailTab;
 
 export function eventDetailTabContent(ev: EventRecord, tab: EventDetailTab): string {
   const slug = ev.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   switch (tab) {
     case "Overview":
       return `${ev.customer} · ${ev.location} · ${ev.viewers} viewers · Revenue ${ev.revenue}`;
-    case "YouTube":
-      return "Connected channel: SV Events Live · Stream status: " + ev.status;
-    case "Theme":
-      return "Applied theme: Wedding Elegant";
+    case "Theme Content":
+      return "Edit invitation content and preview your theme layout";
+    case "Payment":
+      return "Event creation fee and payment approval status";
     case "Event Page":
       return "events.svevents.in/" + slug;
-    case "Viewers":
-      return ev.viewers + " unique viewers so far";
-    case "Recording":
-      return ev.status === "Completed" ? "Recording available for download" : "Recording will be available after the event ends";
-    case "Analytics":
-      return "Peak concurrent viewers, watch time, and engagement stats for this event";
-    case "Settings":
-      return "Manage visibility, access, and notification preferences for this event";
+    default:
+      return "";
   }
 }
 
@@ -410,12 +416,13 @@ export const ytEvents = events.slice(0, 5).map((e) => ({
 
 export const wizardStepLabels = [
   "Event Details",
-  "YouTube",
   "Theme",
   "Theme Content",
   "Event Page",
   "Payment",
 ];
+
+/** Legacy export — prefer wizardStepLabels(kind) from event-wizard.ts */
 
 export function getCustomer(id: number): Customer | undefined {
   return customers.find((c) => c.id === id);

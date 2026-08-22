@@ -21,6 +21,9 @@ type BackendEvent = {
   location?: string | null;
   customerId?: string | null;
   status: string;
+  themeId?: string | null;
+  showWatchLive?: boolean | null;
+  isPublished?: boolean;
 };
 
 type BackendPayment = {
@@ -66,6 +69,8 @@ export async function fetchVendorProfile() {
       whatsappNumber?: string | null;
       whatsappEnabled?: boolean;
       eventCreationFee?: number;
+      liveEventCreationFee?: number;
+      invitationCreationFee?: number;
       branding?: Record<string, unknown>;
       wallet?: { balance?: number; currency?: string } | null;
     }>("/vendors/me");
@@ -75,7 +80,14 @@ export async function fetchVendorProfile() {
   }
 }
 
-export async function fetchEventCreationPaymentConfigAction() {
+export async function fetchEventCreationPaymentConfigAction(opts?: {
+  eventId?: string;
+  invitationId?: string;
+}) {
+  const params = new URLSearchParams();
+  if (opts?.eventId) params.set("eventId", opts.eventId);
+  if (opts?.invitationId) params.set("invitationId", opts.invitationId);
+  const query = params.toString() ? `?${params.toString()}` : "";
   const { data } = await apiFetch<{
     amount: number;
     currency: string;
@@ -83,12 +95,13 @@ export async function fetchEventCreationPaymentConfigAction() {
     payeeName: string;
     qrImage: string;
     instructions: string;
-  }>("/payments/event-creation/config");
+  }>(`/payments/event-creation/config${query}`);
   return data;
 }
 
 export async function submitEventCreationPaymentAction(payload: {
-  eventId: string;
+  eventId?: string;
+  invitationId?: string;
   utrNumber: string;
   paymentImage: string;
 }) {
@@ -176,10 +189,118 @@ export async function fetchEvents(): Promise<(EventRecord & { _id?: string })[]>
         viewers: "—",
         revenue: "₹0",
         _id: e.id,
+        themeId: e.themeId ?? null,
+        showWatchLive: e.showWatchLive,
+        isPublished: e.isPublished === true,
       };
     });
   } catch {
     return [];
+  }
+}
+
+type BackendInvitation = {
+  id: string;
+  invitationName: string;
+  invitationDate?: string | null;
+  eventDate?: string | null;
+  startTime?: string | null;
+  location?: string | null;
+  customerId?: string | null;
+  status: string;
+  themeId?: string | null;
+  isPublished?: boolean;
+  invitationSlug?: string;
+  invitationCode?: string;
+};
+
+export async function fetchInvitations(): Promise<(EventRecord & { _id?: string })[]> {
+  try {
+    const { data } = await apiFetch<BackendInvitation[]>("/invitations");
+    return (data ?? []).map((e, i) => {
+      const date = e.eventDate ? new Date(e.eventDate) : null;
+      return {
+        id: i + 1,
+        name: e.invitationName,
+        date: date
+          ? date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+          : "—",
+        time: e.startTime
+          ? new Date(e.startTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+          : "—",
+        location: e.location ?? "—",
+        customer: e.customerId ?? "—",
+        status: mapEventStatus(e.status),
+        viewers: "—",
+        revenue: "₹0",
+        _id: e.id,
+        themeId: e.themeId ?? null,
+        isPublished: e.isPublished === true,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchInvitation(id: string) {
+  try {
+    const { data } = await apiFetch<
+      BackendInvitation & {
+        themeConfig?: {
+          id?: string;
+          themeId?: string;
+          primaryColor?: string | null;
+          secondaryColor?: string | null;
+          accentColor?: string | null;
+          pageTitle?: string | null;
+        } | null;
+        media?: { id: string; url?: string; type?: string }[];
+        access?: {
+          id?: string;
+          accessType?: "PUBLIC" | "PRIVATE";
+          isEnabled?: boolean;
+        } | null;
+        description?: string | null;
+        eventType?: string | null;
+        pageTitle?: string | null;
+        coverImage?: string | null;
+        themeId?: string | null;
+        isPublic?: boolean;
+        brideName?: string | null;
+        groomName?: string | null;
+        invitationCard?: string | null;
+        whatsappImage?: string | null;
+        subEvents?: unknown[];
+        galleryImages?: string[];
+      }
+    >(`/invitations/${id}`);
+    const date = data.eventDate ? new Date(data.eventDate) : null;
+    const normalizedRaw = {
+      ...data,
+      eventName: data.invitationName,
+      eventSlug: data.invitationSlug,
+      eventCode: data.invitationCode,
+    };
+    return {
+      id: 0,
+      name: data.invitationName,
+      date: date
+        ? date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+        : "—",
+      time: data.startTime
+        ? new Date(data.startTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+        : "—",
+      location: data.location ?? "—",
+      customer: data.customerId ?? "—",
+      status: mapEventStatus(data.status),
+      viewers: "—",
+      revenue: "₹0",
+      _id: data.id,
+      raw: normalizedRaw,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -262,33 +383,68 @@ export async function fetchEventRecording(eventId: string) {
 }
 
 export async function fetchThemes() {
+  type ThemeRow = {
+    id: string;
+    name: string;
+    slug: string;
+    status?: string;
+    previewImage?: string | null;
+    config?: {
+      colors?: { primary?: string; secondary?: string; accent?: string };
+      layout?: string;
+      fields?: unknown[];
+      sections?: Record<string, boolean>;
+    };
+  };
+
+  const mapTheme = (t: ThemeRow) => {
+    const colors = t.config?.colors ?? {};
+    return {
+      slug: t.slug || t.id,
+      name: t.name || "Theme",
+      previewImage: t.previewImage ?? null,
+      config: t.config,
+      stripe1: colors.secondary || "#F3D9C0",
+      stripe2: colors.accent || colors.secondary || "#EAC29A",
+      primary: colors.primary || "#C77B3E",
+      secondary: colors.secondary || "#F3D9C0",
+      accent: colors.accent || "#8A5A2E",
+      layout: t.config?.layout || t.slug || "cinematic",
+      _id: t.id,
+    };
+  };
+
   try {
-    const { data } = await apiFetch<
-      {
-        id: string;
-        name: string;
-        slug: string;
-        status?: string;
-        config?: { colors?: { primary?: string; secondary?: string; accent?: string }; layout?: string };
-      }[]
-    >("/themes?status=ACTIVE");
-    return (data ?? []).map((t) => {
-      const colors = t.config?.colors ?? {};
-      return {
-        slug: t.slug || t.id,
-        name: t.name || "Theme",
-        stripe1: colors.secondary || "#F3D9C0",
-        stripe2: colors.accent || colors.secondary || "#EAC29A",
-        primary: colors.primary || "#C77B3E",
-        secondary: colors.secondary || "#F3D9C0",
-        accent: colors.accent || "#8A5A2E",
-        layout: t.config?.layout || t.slug || "cinematic",
-        _id: t.id,
-      };
-    });
+    const { data: assigned } = await apiFetch<{ theme?: ThemeRow & { id?: string } }[]>(
+      "/themes/vendor-assigned"
+    );
+    const fromAssigned = (assigned ?? [])
+      .map((row) => {
+        const th = row.theme;
+        if (!th) return null;
+        return { ...th, id: th.id ?? (th as ThemeRow).id };
+      })
+      .filter(Boolean) as ThemeRow[];
+    return fromAssigned.map(mapTheme);
   } catch {
     return [];
   }
+}
+
+export async function createEventPreviewToken(eventId: string) {
+  const { data } = await apiFetch<{ token: string; publicUrl: string; expiresInSeconds: number }>(
+    `/events/${eventId}/preview-token`,
+    { method: "POST", body: JSON.stringify({}) }
+  );
+  return data;
+}
+
+export async function createInvitationPreviewToken(invitationId: string) {
+  const { data } = await apiFetch<{ token: string; publicUrl: string; expiresInSeconds: number }>(
+    `/invitations/${invitationId}/preview-token`,
+    { method: "POST", body: JSON.stringify({}) }
+  );
+  return data;
 }
 
 export async function fetchWallet() {
@@ -313,11 +469,13 @@ export async function fetchWallet() {
   }
 }
 
-export async function fetchEventCreationPayment(eventId: string) {
+export async function fetchEventCreationPayment(entityId: string, kind: "live" | "invitation" = "live") {
   try {
-    const { data } = await apiFetch<BackendPayment[]>(
-      `/payments?purpose=EVENT_CREATION&eventId=${encodeURIComponent(eventId)}`
-    );
+    const param =
+      kind === "invitation"
+        ? `invitationId=${encodeURIComponent(entityId)}`
+        : `eventId=${encodeURIComponent(entityId)}`;
+    const { data } = await apiFetch<BackendPayment[]>(`/payments?purpose=EVENT_CREATION&${param}`);
     const list = data ?? [];
     if (!list.length) return null;
     const p = list[0];
@@ -439,6 +597,56 @@ export async function fetchNotifications() {
   } catch {
     return [];
   }
+}
+
+export async function createInvitationAction(payload: Record<string, unknown>) {
+  const { data } = await apiFetch<{ id?: string; _id?: string; invitationSlug?: string; publicUrl?: string }>(
+    "/invitations",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+  const id = data.id || data._id;
+  if (!id) throw new Error("Invitation created but no id returned");
+  return { ...data, id };
+}
+
+export async function updateInvitationAction(id: string, payload: Record<string, unknown>) {
+  const { data } = await apiFetch<{ id: string; invitationSlug?: string; publicUrl?: string }>(
+    `/invitations/${id}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
+  return data;
+}
+
+export async function setInvitationThemeAction(
+  id: string,
+  payload: {
+    themeId: string;
+    primaryColor?: string;
+    pageTitle?: string;
+    logo?: string;
+    coverImage?: string;
+    customConfig?: Record<string, unknown>;
+  }
+) {
+  const { data } = await apiFetch(`/invitations/${id}/theme-config`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+  return data;
+}
+
+export async function publishInvitationAction(id: string) {
+  const { data } = await apiFetch<{ id: string; publicUrl?: string }>(`/invitations/${id}/publish`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  return data;
 }
 
 export async function createEventAction(payload: Record<string, unknown>) {

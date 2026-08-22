@@ -1,27 +1,25 @@
 import Link from "next/link";
-import { wizardStepLabels } from "@/lib/data";
+import type { EventWizardKind } from "@/lib/event-wizard";
+import { wizardStepLabels, wizardStepUrl } from "@/lib/event-wizard";
 import styles from "./wizard.module.css";
 
 export function WizardStepper({
   current,
   eventId,
+  kind,
 }: {
   current: number;
   eventId?: string | null;
+  kind: EventWizardKind;
 }) {
   return (
     <div className={styles.stepsRow}>
-      {wizardStepLabels.map((label, index) => {
+      {wizardStepLabels(kind).map((label, index) => {
         const step = index + 1;
         const done = step < current;
         const active = step === current;
         const canJump = Boolean(eventId) && step <= current;
-        const href =
-          step === 1 && !eventId
-            ? "/vendor/events/new?step=1"
-            : eventId
-              ? `/vendor/events/new?step=${step}&eventId=${encodeURIComponent(eventId)}`
-              : null;
+        const href = canJump || (step === 1 && !eventId) ? wizardStepUrl(kind, step, eventId) : null;
 
         const circle = (
           <div

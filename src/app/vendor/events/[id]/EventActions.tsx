@@ -7,14 +7,23 @@ import {
   isLoopbackPublicBase,
   resolveScannablePublicEventUrl,
 } from "@/lib/public-event-url";
+import { resolveEventShareImageUrl, shareEventWithImage } from "@/lib/share-event";
 
 export function EventQuickActions({
   eventSlug,
   eventId,
+  eventName,
+  coverImage,
+  invitationCard,
+  whatsappImage,
   isLive = false,
 }: {
   eventSlug?: string | null;
   eventId: string;
+  eventName?: string | null;
+  coverImage?: string | null;
+  invitationCard?: string | null;
+  whatsappImage?: string | null;
   isLive?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
@@ -46,6 +55,18 @@ export function EventQuickActions({
     } catch {
       /* ignore */
     }
+  }
+
+  async function shareEvent() {
+    if (!liveUrl) return;
+    const imageUrl = resolveEventShareImageUrl({ whatsappImage, coverImage, invitationCard });
+    await shareEventWithImage({
+      url: liveUrl,
+      text: `You're invited: ${eventName || "Our event"}\n${liveUrl}`,
+      imageUrl,
+      title: eventName || "Event invitation",
+      fileName: "event-invite.png",
+    });
   }
 
   return (
@@ -86,28 +107,22 @@ export function EventQuickActions({
         </a>
         <a
           className={ui.btnOutlineSm}
-          href={`/vendor/events/${eventId}?tab=Theme`}
+          href={`/vendor/events/new?step=2&eventId=${encodeURIComponent(eventId)}`}
           style={{ textDecoration: "none" }}
         >
           Change Theme
         </a>
         <a
           className={ui.btnOutlineSm}
-          href={`/vendor/events/${eventId}?tab=YouTube`}
+          href={`/vendor/events/${eventId}?tab=${encodeURIComponent("Theme Content")}`}
           style={{ textDecoration: "none" }}
         >
           YouTube
         </a>
         {isLive && liveUrl ? (
-          <a
-            className={ui.btnOutlineSm}
-            href={`https://wa.me/?text=${encodeURIComponent(`Join live: ${liveUrl}`)}`}
-            target="_blank"
-            rel="noreferrer"
-            style={{ textDecoration: "none" }}
-          >
+          <button type="button" className={ui.btnOutlineSm} onClick={shareEvent}>
             Share
-          </a>
+          </button>
         ) : (
           <span className={ui.btnOutlineSm} style={{ opacity: 0.45, cursor: "not-allowed" }}>
             Share

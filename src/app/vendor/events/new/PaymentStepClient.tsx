@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import ui from "@/components/ui.module.css";
+import type { EventWizardKind } from "@/lib/event-wizard";
 import {
   fetchEventCreationPaymentConfig,
   submitPublishStep,
@@ -23,10 +24,12 @@ export function PaymentStepClient({
   eventId,
   eventName,
   fee,
+  wizardKind = "live",
 }: {
   eventId: string;
   eventName: string;
   fee: number;
+  wizardKind?: EventWizardKind;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -41,7 +44,7 @@ export function PaymentStepClient({
     let cancelled = false;
     (async () => {
       try {
-        const data = await fetchEventCreationPaymentConfig();
+        const data = await fetchEventCreationPaymentConfig(eventId, wizardKind);
         if (!cancelled) setConfig(data);
       } catch (err) {
         if (!cancelled) {
@@ -54,7 +57,7 @@ export function PaymentStepClient({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [eventId, wizardKind]);
 
   const amount = config?.amount ?? fee;
 
@@ -64,6 +67,7 @@ export function PaymentStepClient({
       try {
         const fd = new FormData();
         fd.set("eventId", eventId);
+        fd.set("wizardKind", wizardKind);
         await submitPublishStep(fd);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not publish.");
@@ -84,7 +88,9 @@ export function PaymentStepClient({
     startTransition(async () => {
       try {
         await submitQrEventPayment({
-          eventId,
+          ...(wizardKind === "invitation"
+            ? { invitationId: eventId }
+            : { eventId }),
           utrNumber: utr.trim(),
           paymentImage: image,
         });
@@ -132,9 +138,15 @@ export function PaymentStepClient({
           type="button"
           className={ui.btnDark}
           style={{ marginTop: 16 }}
-          onClick={() => router.push(`/vendor/events/${eventId}`)}
+          onClick={() =>
+            router.push(
+              wizardKind === "invitation"
+                ? `/vendor/invitations/${eventId}`
+                : `/vendor/events/${eventId}`
+            )
+          }
         >
-          Go to event
+          Go to {wizardKind === "invitation" ? "invitation" : "event"}
         </button>
       </div>
     );

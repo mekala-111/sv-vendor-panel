@@ -2,18 +2,14 @@ import Link from "next/link";
 import { Badge } from "@/components/Badge";
 import ui from "@/components/ui.module.css";
 import { formatINR } from "@/lib/api";
-import { fetchDashboard, fetchEvents, fetchNotifications } from "@/lib/server-data";
+import { fetchDashboard, fetchEvents } from "@/lib/server-data";
 import styles from "./page.module.css";
 
 const RECENT_COLS = "2fr 1.3fr 1.3fr 1fr 0.8fr";
 const REVENUE_BARS = [30, 42, 38, 50, 44, 48, 55, 50, 58, 68, 80, 92];
 
 export default async function DashboardPage() {
-  const [dashboard, events, notifications] = await Promise.all([
-    fetchDashboard(),
-    fetchEvents(),
-    fetchNotifications(),
-  ]);
+  const [dashboard, events] = await Promise.all([fetchDashboard(), fetchEvents()]);
 
   const companyName = dashboard?.companyName || "Vendor";
   const stats = [
@@ -182,26 +178,6 @@ export default async function DashboardPage() {
             })
           )}
         </div>
-      </div>
-
-      <div className={ui.card}>
-        <div className={ui.sectionHead}>
-          <div className={ui.sectionTitle}>Recent Notifications</div>
-          <div className={ui.viewAll}>View All</div>
-        </div>
-        {notifications.length === 0 ? (
-          <div style={{ fontSize: 13, color: "var(--muted)", padding: "8px 0" }}>No notifications.</div>
-        ) : (
-          notifications.map((n, i) => (
-            <div key={i} className={styles.notifRow}>
-              <div className={styles.notifDot} style={{ background: n.color }} />
-              <div>
-                <div className={styles.notifText}>{n.text}</div>
-                <div className={styles.notifTime}>{n.time}</div>
-              </div>
-            </div>
-          ))
-        )}
       </div>
     </>
   );

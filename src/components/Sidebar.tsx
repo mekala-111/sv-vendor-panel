@@ -2,25 +2,21 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import styles from "./Sidebar.module.css";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/vendor/dashboard" },
   { label: "Customers", href: "/vendor/customers" },
-  { label: "Events", href: "/vendor/events" },
+  { label: "Manage Live Events", href: "/vendor/events" },
+  { label: "Manage Invitations", href: "/vendor/invitations" },
   { label: "Themes", href: "/vendor/themes" },
-  { label: "YouTube", href: "/vendor/youtube" },
-  { label: "Wallet", href: "/vendor/wallet" },
   { label: "Payments", href: "/vendor/payments" },
-  { label: "Branding", href: "/vendor/branding" },
-  { label: "Pricing", href: "/vendor/pricing" },
-  { label: "Support", href: "/vendor/support" },
   { label: "Settings", href: "/vendor/settings" },
 ];
 
-export function Sidebar({ walletBalance }: { walletBalance?: ReactNode }) {
+export function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -61,14 +57,6 @@ export function Sidebar({ walletBalance }: { walletBalance?: ReactNode }) {
             );
           })}
         </nav>
-        <div className={styles.walletCard}>
-          <div className={styles.walletLabel}>Wallet Balance</div>
-          <div className={styles.walletAmount}>{walletBalance ?? "₹0.00"}</div>
-          <div className={styles.walletSub}>Available Balance</div>
-          <Link href="/vendor/wallet" className={styles.walletBtn} onClick={() => setOpen(false)}>
-            + Add Money
-          </Link>
-        </div>
       </div>
     </>
   );

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { setEventThemeAction, updateEventAction } from "@/lib/server-data";
+import { buildThemeContentPayload } from "@/lib/theme-content-payload";
 
 function rethrowRedirect(err: unknown) {
   if (
@@ -73,4 +74,17 @@ export async function saveEventPageAction(formData: FormData) {
     redirect(`/vendor/events/${eventId}?tab=Event%20Page&error=1`);
   }
   redirect(`/vendor/events/${eventId}?tab=Event%20Page&saved=1`);
+}
+
+export async function saveThemeContentAction(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "").trim();
+  if (!eventId) redirect("/vendor/events");
+
+  try {
+    await updateEventAction(eventId, buildThemeContentPayload(formData, "live"));
+  } catch (err) {
+    rethrowRedirect(err);
+    redirect(`/vendor/events/${eventId}?tab=Theme%20Content&error=1`);
+  }
+  redirect(`/vendor/events/${eventId}?tab=Theme%20Content&saved=1`);
 }

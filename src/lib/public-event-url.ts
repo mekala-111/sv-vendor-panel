@@ -8,6 +8,17 @@ export function getConfiguredPublicEventBase(): string {
 }
 
 /**
+ * Public guest URL for an invitation slug.
+ */
+export function buildPublicInvitationPathUrl(base: string, slug: string): string {
+  const cleanSlug = String(slug || "")
+    .trim()
+    .replace(/^\/+/, "");
+  if (!cleanSlug) return "";
+  return `${base.replace(/\/$/, "")}/invitation/${encodeURIComponent(cleanSlug)}`;
+}
+
+/**
  * Public guest URL for an event slug.
  * Uses /event/{slug} so it never collides with marketing routes.
  */
@@ -44,6 +55,34 @@ export function resolveScannablePublicEventUrl(
         configured.port ||
         "3002";
       return `${window.location.protocol}//${pageHost}:${publicPort}/event/${encodeURIComponent(slug)}`;
+    }
+  } catch {
+    /* keep configured */
+  }
+
+  return pathUrl;
+}
+
+export function resolveScannablePublicInvitationUrl(
+  slug: string,
+  configuredBase = getConfiguredPublicEventBase()
+): string {
+  const pathUrl = buildPublicInvitationPathUrl(configuredBase, slug);
+  if (!pathUrl || typeof window === "undefined") return pathUrl;
+
+  try {
+    const configured = new URL(configuredBase);
+    const pageHost = window.location.hostname;
+    const isLoopback =
+      configured.hostname === "localhost" || configured.hostname === "127.0.0.1";
+    const pageIsLoopback = pageHost === "localhost" || pageHost === "127.0.0.1";
+
+    if (isLoopback && !pageIsLoopback) {
+      const publicPort =
+        process.env.NEXT_PUBLIC_PUBLIC_EVENT_PORT ||
+        configured.port ||
+        "3002";
+      return `${window.location.protocol}//${pageHost}:${publicPort}/invitation/${encodeURIComponent(slug)}`;
     }
   } catch {
     /* keep configured */

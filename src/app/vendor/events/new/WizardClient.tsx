@@ -7,7 +7,16 @@ import {
   isLoopbackPublicBase,
   resolveScannablePublicEventUrl,
 } from "@/lib/public-event-url";
+import { normalizeTimeForInput } from "@/lib/time-input";
 import styles from "./wizard.module.css";
+
+function normalizeEventSlug(raw: string) {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 export function CopyLinkButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
@@ -139,6 +148,7 @@ export function ImageFileField({
   accept = "image/jpeg,image/jpg,image/png,image/webp",
   maxBytes = 512000,
   defaultValue = "",
+  onValueChange,
 }: {
   name: string;
   label: string;
@@ -146,9 +156,15 @@ export function ImageFileField({
   accept?: string;
   maxBytes?: number;
   defaultValue?: string;
+  onValueChange?: (value: string) => void;
 }) {
   const [value, setValue] = useState(defaultValue);
   const [error, setError] = useState("");
+
+  function updateValue(next: string) {
+    setValue(next);
+    onValueChange?.(next);
+  }
 
   return (
     <div>
@@ -176,7 +192,7 @@ export function ImageFileField({
             return;
           }
           setError("");
-          setValue(await readAsDataUrl(file));
+          updateValue(await readAsDataUrl(file));
         }}
       />
       {error ? <div className={styles.fieldError}>{error}</div> : null}
@@ -184,7 +200,7 @@ export function ImageFileField({
         <div className={styles.thumbRow}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={value} alt="" className={styles.thumb} />
-          <button type="button" className={ui.btnOutlineSm} onClick={() => setValue("")}>
+          <button type="button" className={ui.btnOutlineSm} onClick={() => updateValue("")}>
             Remove
           </button>
         </div>
@@ -197,13 +213,20 @@ export function GalleryImagesField({
   name = "galleryImages",
   defaultValue = [],
   max = 20,
+  onValueChange,
 }: {
   name?: string;
   defaultValue?: string[];
   max?: number;
+  onValueChange?: (images: string[]) => void;
 }) {
   const [images, setImages] = useState<string[]>(defaultValue);
   const [error, setError] = useState("");
+
+  function updateImages(next: string[]) {
+    setImages(next);
+    onValueChange?.(next);
+  }
 
   return (
     <div>
@@ -235,7 +258,7 @@ export function GalleryImagesField({
             next.push(await readAsDataUrl(file));
             setError("");
           }
-          setImages(next.slice(0, max));
+          updateImages(next.slice(0, max));
           e.target.value = "";
         }}
       />
@@ -249,7 +272,7 @@ export function GalleryImagesField({
               <button
                 type="button"
                 className={styles.galleryRemove}
-                onClick={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
+                onClick={() => updateImages(images.filter((_, idx) => idx !== i))}
               >
                 ×
               </button>
@@ -266,9 +289,13 @@ type SubEventRow = { title: string; date: string; time: string; place: string };
 export function SubEventsField({
   name = "subEvents",
   defaultValue = [],
+  onValueChange,
+  showLabel = true,
 }: {
   name?: string;
   defaultValue?: Partial<SubEventRow>[];
+  onValueChange?: (rows: SubEventRow[]) => void;
+  showLabel?: boolean;
 }) {
   const [rows, setRows] = useState<SubEventRow[]>(() =>
     (defaultValue.length
@@ -277,17 +304,26 @@ export function SubEventsField({
     ).map((r) => ({
       title: String(r.title ?? ""),
       date: String(r.date ?? ""),
-      time: String(r.time ?? ""),
+      time: normalizeTimeForInput(String(r.time ?? "")),
       place: String(r.place ?? ""),
     }))
   );
 
+  function updateRows(next: SubEventRow[]) {
+    setRows(next);
+    onValueChange?.(next);
+  }
+
   return (
     <div>
-      <div className={ui.label} style={{ marginBottom: 8 }}>
-        Sub events
-      </div>
-      <div className={styles.fieldHint}>e.g. Haldi, Mehendi, Sangeet, Reception</div>
+      {showLabel ? (
+        <>
+          <div className={ui.label} style={{ marginBottom: 8 }}>
+            Sub events
+          </div>
+          <div className={styles.fieldHint}>e.g. Haldi, Mehendi, Sangeet, Reception</div>
+        </>
+      ) : null}
       <input type="hidden" name={name} value={JSON.stringify(rows.filter((r) => r.title.trim()))} />
       <div className={styles.subEventList}>
         {rows.map((row, index) => (
@@ -298,7 +334,7 @@ export function SubEventsField({
                 <button
                   type="button"
                   className={styles.galleryRemove}
-                  onClick={() => setRows((prev) => prev.filter((_, i) => i !== index))}
+                  onClick={() => updateRows(rows.filter((_, i) => i !== index))}
                   aria-label="Remove sub event"
                 >
                   ×
@@ -310,8 +346,8 @@ export function SubEventsField({
               placeholder="Title (Haldi / Wedding / Reception)"
               value={row.title}
               onChange={(e) =>
-                setRows((prev) =>
-                  prev.map((r, i) => (i === index ? { ...r, title: e.target.value } : r))
+                updateRows(
+                  rows.map((r, i) => (i === index ? { ...r, title: e.target.value } : r))
                 )
               }
             />
@@ -321,18 +357,18 @@ export function SubEventsField({
                 type="date"
                 value={row.date}
                 onChange={(e) =>
-                  setRows((prev) =>
-                    prev.map((r, i) => (i === index ? { ...r, date: e.target.value } : r))
+                  updateRows(
+                    rows.map((r, i) => (i === index ? { ...r, date: e.target.value } : r))
                   )
                 }
               />
               <input
                 className={ui.input}
-                placeholder="Time (e.g. 6:00 PM)"
+                type="time"
                 value={row.time}
                 onChange={(e) =>
-                  setRows((prev) =>
-                    prev.map((r, i) => (i === index ? { ...r, time: e.target.value } : r))
+                  updateRows(
+                    rows.map((r, i) => (i === index ? { ...r, time: e.target.value } : r))
                   )
                 }
               />
@@ -342,8 +378,8 @@ export function SubEventsField({
               placeholder="Place / venue"
               value={row.place}
               onChange={(e) =>
-                setRows((prev) =>
-                  prev.map((r, i) => (i === index ? { ...r, place: e.target.value } : r))
+                updateRows(
+                  rows.map((r, i) => (i === index ? { ...r, place: e.target.value } : r))
                 )
               }
             />
@@ -356,7 +392,7 @@ export function SubEventsField({
           className={ui.btnOutlineSm}
           style={{ marginTop: 10 }}
           onClick={() =>
-            setRows((prev) => [...prev, { title: "", date: "", time: "", place: "" }])
+            updateRows([...rows, { title: "", date: "", time: "", place: "" }])
           }
         >
           + Add sub event
@@ -375,7 +411,11 @@ export function DomainSlugInput({
   defaultValue?: string;
   disabled?: boolean;
 }) {
-  const [value, setValue] = useState(defaultValue);
+  const [value, setValue] = useState(() => normalizeEventSlug(defaultValue));
+
+  useEffect(() => {
+    setValue(normalizeEventSlug(defaultValue));
+  }, [defaultValue]);
 
   return (
     <input
@@ -385,17 +425,20 @@ export function DomainSlugInput({
       value={value}
       disabled={disabled}
       required
+      minLength={2}
       pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-      title="Lowercase letters and numbers only (no spaces)"
-      placeholder="raviwedsrani"
+      title="Lowercase letters, numbers, and hyphens only (no spaces)"
+      placeholder="ravi-weds-rani"
       onChange={(e) => {
-        const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
-        setValue(cleaned);
+        setValue(normalizeEventSlug(e.target.value));
       }}
       onPaste={(e) => {
         e.preventDefault();
-        const text = e.clipboardData.getData("text").toLowerCase().replace(/[^a-z0-9-]/g, "");
-        setValue(text);
+        const text = e.clipboardData.getData("text");
+        setValue(normalizeEventSlug(text));
+      }}
+      onBlur={() => {
+        setValue((current) => normalizeEventSlug(current));
       }}
     />
   );

@@ -11,19 +11,20 @@ export default async function EventsListPage(props: PageProps<"/vendor/events">)
   const { filter } = await props.searchParams;
   const selected = Array.isArray(filter) ? filter[0] : filter;
   const activeFilter = FILTERS.find((f) => f === selected) ?? "All";
+
   const events = await fetchEvents();
   const filtered = activeFilter === "All" ? events : events.filter((e) => e.status === activeFilter);
 
   return (
     <>
-      <h1 className={ui.pageTitle}>Events</h1>
+      <h1 className={ui.pageTitle}>Manage Live Events</h1>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <LinkTabs
           active={activeFilter}
           items={FILTERS.map((f) => ({ label: f, href: `/vendor/events?filter=${f}` }))}
         />
         <Link href="/vendor/events/new" className={ui.btnPrimary}>
-          + Create Event
+          + Create Live Event
         </Link>
       </div>
       <div className={ui.cardTight}>
@@ -37,7 +38,7 @@ export default async function EventsListPage(props: PageProps<"/vendor/events">)
         </div>
         {filtered.length === 0 ? (
           <div style={{ padding: "24px 0", textAlign: "center", color: "var(--muted)", fontSize: 13.5 }}>
-            No events found.
+            No live events found.
           </div>
         ) : (
           filtered.map((r) => (

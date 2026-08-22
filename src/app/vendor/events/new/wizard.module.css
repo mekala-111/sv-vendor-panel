@@ -36,6 +36,45 @@
   margin: 0 auto;
 }
 
+.widePanel {
+  max-width: none;
+  margin: 0;
+}
+
+.contentEditorLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.contentFormPane {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.contentPreviewPane {
+  position: sticky;
+  top: 16px;
+  min-height: min(85vh, 900px);
+}
+
+.contentPreviewPane iframe,
+.contentPreviewPane :global(.frame) {
+  min-height: min(80vh, 820px);
+}
+
+.contentPreviewLabel {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-strong);
+  margin-bottom: 8px;
+}
+
 .stepTitle {
   font-size: 16px;
   font-weight: 800;
@@ -387,6 +426,48 @@
   font-weight: 600;
 }
 
+.subEventsToggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.toggleSwitch {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.toggleSwitchOn {
+  background: #1e9e5a;
+  border-color: #1e9e5a;
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s ease;
+}
+
+.toggleSwitchOn .toggleKnob {
+  transform: translateX(18px);
+}
+
 .servicePill {
   display: inline-flex;
   align-items: center;
@@ -406,8 +487,15 @@
   text-decoration: none;
 }
 
-.widePanel {
-  max-width: 720px;
+@media (max-width: 960px) {
+  .contentEditorLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .contentPreviewPane {
+    position: static;
+    min-height: 420px;
+  }
 }
 
 @media (max-width: 700px) {

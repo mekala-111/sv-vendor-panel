@@ -16,20 +16,85 @@
 .name {
   font-weight: 700;
   font-size: 13.5px;
+  margin-bottom: 6px;
+}
+
+.meta {
+  font-size: 11.5px;
+  color: var(--muted);
   margin-bottom: 10px;
 }
 
 .actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
-.customizeLink {
-  display: block;
-  text-align: center;
-  margin-top: 6px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--accent);
+.previewOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.previewTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.previewBody {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.previewTitle {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.previewSub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.closeBtn:hover {
+  background: var(--bg);
+  border-color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .previewTopBar {
+    padding: 10px 12px;
+  }
+
+  .previewTitle {
+    font-size: 14px;
+  }
 }
