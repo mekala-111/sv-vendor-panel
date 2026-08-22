@@ -49,6 +49,7 @@ export type VendorThemePreview = {
     sections?: Record<string, boolean>;
     fields?: unknown[];
     defaults?: Record<string, string>;
+    assetPath?: string;
   };
 };
 

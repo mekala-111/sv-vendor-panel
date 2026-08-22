@@ -342,6 +342,7 @@ export async function fetchEvent(id: string) {
         isPublic?: boolean;
         youtubeLiveUrl?: string | null;
         youtubeChannelId?: string | null;
+        teaserUrl?: string | null;
       }
     >(`/events/${id}`);
     const date = data.eventDate ? new Date(data.eventDate) : null;
