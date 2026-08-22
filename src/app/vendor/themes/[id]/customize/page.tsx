@@ -1,16 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ui from "@/components/ui.module.css";
-import { getTheme, vendorThemes } from "@/lib/data";
+import { fetchThemes } from "@/lib/server-data";
 import styles from "./page.module.css";
-
-export function generateStaticParams() {
-  return vendorThemes.map((t) => ({ id: t.slug }));
-}
 
 export default async function ThemeCustomizePage(props: PageProps<"/vendor/themes/[id]/customize">) {
   const { id } = await props.params;
-  const theme = getTheme(id);
+  const themes = await fetchThemes();
+  const theme = themes.find((t) => t.slug === id || t._id === id);
   if (!theme) notFound();
 
   return (
@@ -67,7 +64,10 @@ export default async function ThemeCustomizePage(props: PageProps<"/vendor/theme
               <input className={ui.input} placeholder="Instagram, Facebook URLs" />
             </div>
           </div>
-          <button className={ui.btnPrimary} style={{ width: "100%", textAlign: "center", fontWeight: 800, fontSize: 13.5, padding: 12, marginTop: 20 }}>
+          <button
+            className={ui.btnPrimary}
+            style={{ width: "100%", textAlign: "center", fontWeight: 800, fontSize: 13.5, padding: 12, marginTop: 20 }}
+          >
             Save Changes
           </button>
         </div>

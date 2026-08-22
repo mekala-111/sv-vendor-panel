@@ -8,9 +8,17 @@ export const metadata: Metadata = {
   title: "Vendor Login — SV Live Events",
 };
 
+function errorMessage(error?: string) {
+  if (error === "role") return "This account is not a vendor. Use a vendor login.";
+  if (error === "session") return "Your session expired. Please sign in again.";
+  if (error) return "Invalid email or password. Please try again.";
+  return null;
+}
+
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const params = await searchParams;
   const error = Array.isArray(params.error) ? params.error[0] : params.error;
+  const message = errorMessage(error);
 
   return (
     <div className={styles.wrap}>
@@ -36,7 +44,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             type="email"
             autoComplete="email"
             required
-            defaultValue="contact@svevents.in"
+            placeholder="you@company.com"
             className={`${ui.input} ${styles.field}`}
           />
 
@@ -49,12 +57,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             type="password"
             autoComplete="current-password"
             required
+            placeholder="Password"
             className={`${ui.input} ${styles.field}`}
           />
 
-          {error ? (
+          {message ? (
             <p className={styles.error} role="alert">
-              Enter a valid email and password.
+              {message}
             </p>
           ) : null}
 

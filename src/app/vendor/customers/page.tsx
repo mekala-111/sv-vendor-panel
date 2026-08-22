@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Badge } from "@/components/Badge";
 import ui from "@/components/ui.module.css";
-import { customers } from "@/lib/data";
+import { fetchCustomers } from "@/lib/server-data";
 
 const COLS = "1.8fr 1fr 1.2fr 1fr";
 
-export default function CustomersPage() {
+export default async function CustomersPage() {
+  const customers = await fetchCustomers();
+
   return (
     <>
       <h1 className={ui.pageTitle}>Customers</h1>
@@ -19,24 +21,30 @@ export default function CustomersPage() {
           <div>TOTAL SPEND</div>
           <div>STATUS</div>
         </div>
-        {customers.map((c) => (
-          <Link
-            key={c.id}
-            href={`/vendor/customers/${c.id}`}
-            className={`${ui.tableRow} ${ui.rowLink}`}
-            style={{ gridTemplateColumns: COLS, color: "inherit" }}
-          >
-            <div>
-              <div style={{ fontWeight: 700 }}>{c.name}</div>
-              <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{c.email}</div>
-            </div>
-            <div>{c.events}</div>
-            <div style={{ fontWeight: 600 }}>{c.spend}</div>
-            <div>
-              <Badge label={c.status} />
-            </div>
-          </Link>
-        ))}
+        {customers.length === 0 ? (
+          <div style={{ padding: "24px 0", textAlign: "center", color: "var(--muted)", fontSize: 13.5 }}>
+            No customers yet.
+          </div>
+        ) : (
+          customers.map((c) => (
+            <Link
+              key={c._id ?? c.id}
+              href={`/vendor/customers/${c._id ?? c.id}`}
+              className={`${ui.tableRow} ${ui.rowLink}`}
+              style={{ gridTemplateColumns: COLS, color: "inherit" }}
+            >
+              <div>
+                <div style={{ fontWeight: 700 }}>{c.name}</div>
+                <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{c.email}</div>
+              </div>
+              <div>{c.events}</div>
+              <div style={{ fontWeight: 600 }}>{c.spend}</div>
+              <div>
+                <Badge label={c.status} />
+              </div>
+            </Link>
+          ))
+        )}
       </div>
     </>
   );

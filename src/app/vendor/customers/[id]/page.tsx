@@ -3,18 +3,16 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/Badge";
 import { LinkTabs } from "@/components/LinkTabs";
 import ui from "@/components/ui.module.css";
-import { customerTabs, customers, getCustomer, type CustomerTab } from "@/lib/data";
-
-export function generateStaticParams() {
-  return customers.map((c) => ({ id: String(c.id) }));
-}
+import { customerTabs, type CustomerTab } from "@/lib/data";
+import { fetchCustomer } from "@/lib/server-data";
 
 export default async function CustomerDetailPage(props: PageProps<"/vendor/customers/[id]">) {
   const { id } = await props.params;
   const { tab } = await props.searchParams;
-  const customer = getCustomer(Number(id));
+  const customer = await fetchCustomer(id);
   if (!customer) notFound();
 
+  const customerId = customer._id ?? id;
   const selected = Array.isArray(tab) ? tab[0] : tab;
   const activeTab = (customerTabs as readonly string[]).includes(selected ?? "")
     ? (selected as CustomerTab)
@@ -35,7 +33,7 @@ export default async function CustomerDetailPage(props: PageProps<"/vendor/custo
 
       <LinkTabs
         active={activeTab}
-        items={customerTabs.map((t) => ({ label: t, href: `/vendor/customers/${customer.id}?tab=${t}` }))}
+        items={customerTabs.map((t) => ({ label: t, href: `/vendor/customers/${customerId}?tab=${t}` }))}
       />
 
       {activeTab === "Overview" && (
@@ -57,40 +55,64 @@ export default async function CustomerDetailPage(props: PageProps<"/vendor/custo
 
       {activeTab === "Events" && (
         <div className={ui.cardTight}>
-          {customer.eventsList.map((ev, i) => (
-            <div
-              key={i}
-              style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border-soft)", fontSize: 13 }}
-            >
-              <div style={{ fontWeight: 600 }}>{ev.name}</div>
-              <div style={{ color: "var(--muted-strong)" }}>{ev.date}</div>
-            </div>
-          ))}
+          {customer.eventsList.length === 0 ? (
+            <div style={{ padding: "16px 0", color: "var(--muted)", fontSize: 13 }}>No events for this customer.</div>
+          ) : (
+            customer.eventsList.map((ev, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "12px 0",
+                  borderBottom: "1px solid var(--border-soft)",
+                  fontSize: 13,
+                }}
+              >
+                <div style={{ fontWeight: 600 }}>{ev.name}</div>
+                <div style={{ color: "var(--muted-strong)" }}>{ev.date}</div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
       {activeTab === "Payments" && (
         <div className={ui.cardTight}>
-          {customer.paymentsList.map((p, i) => (
-            <div
-              key={i}
-              style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid var(--border-soft)", fontSize: 13 }}
-            >
-              <div style={{ fontWeight: 600 }}>{p.desc}</div>
-              <div style={{ fontWeight: 700 }}>{p.amount}</div>
-            </div>
-          ))}
+          {customer.paymentsList.length === 0 ? (
+            <div style={{ padding: "16px 0", color: "var(--muted)", fontSize: 13 }}>No payments yet.</div>
+          ) : (
+            customer.paymentsList.map((p, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "12px 0",
+                  borderBottom: "1px solid var(--border-soft)",
+                  fontSize: 13,
+                }}
+              >
+                <div style={{ fontWeight: 600 }}>{p.desc}</div>
+                <div style={{ fontWeight: 700 }}>{p.amount}</div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
       {activeTab === "Activity" && (
         <div className={ui.cardTight}>
-          {customer.activity.map((ac, i) => (
-            <div key={i} style={{ padding: "12px 0", borderBottom: "1px solid var(--border-soft)", fontSize: 13 }}>
-              <div>{ac.text}</div>
-              <div style={{ fontSize: 11, color: "var(--muted)" }}>{ac.time}</div>
-            </div>
-          ))}
+          {customer.activity.length === 0 ? (
+            <div style={{ padding: "16px 0", color: "var(--muted)", fontSize: 13 }}>No activity yet.</div>
+          ) : (
+            customer.activity.map((ac, i) => (
+              <div key={i} style={{ padding: "12px 0", borderBottom: "1px solid var(--border-soft)", fontSize: 13 }}>
+                <div>{ac.text}</div>
+                <div style={{ fontSize: 11, color: "var(--muted)" }}>{ac.time}</div>
+              </div>
+            ))
+          )}
         </div>
       )}
     </>

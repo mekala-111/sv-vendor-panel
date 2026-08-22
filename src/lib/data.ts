@@ -36,6 +36,8 @@ export interface Customer {
   eventsList: CustomerEvent[];
   paymentsList: CustomerPayment[];
   activity: CustomerActivity[];
+  /** Backend UUID when loaded from API */
+  _id?: string;
 }
 
 const STATUS_TONE: Record<string, keyof typeof TONES> = {
@@ -185,6 +187,8 @@ export interface EventRecord {
   status: "Live" | "Upcoming" | "Completed";
   viewers: string;
   revenue: string;
+  /** Backend UUID when loaded from API */
+  _id?: string;
 }
 
 export const events: EventRecord[] = [
@@ -219,8 +223,49 @@ export const vendorThemes: VendorTheme[] = [
 ];
 
 export const eventTypeOptions = [
-  "Wedding", "Engagement", "Reception", "Birthday", "Baby Shower", "Cradle Ceremony",
-  "Church Event", "Devotional", "Gruhapravesham", "Sangeeth", "Seemantham", "Upanayanam", "General Event",
+  "Marriage",
+  "Marriage-Events",
+  "Engagement",
+  "Reception",
+  "Birthday",
+  "Baby Shower",
+  "Cradle Ceremony",
+  "Church Event",
+  "Devotional",
+  "Dhothi Ceremony",
+  "Gruhapravesham",
+  "Half Saree",
+  "Muslim Wedding",
+  "Namakarana",
+  "Padi Pooja",
+  "Retirement",
+  "Reunion",
+  "Sangeeth",
+  "Seemantham",
+  "Shastipoorthi",
+  "Upanayanam",
+  "Vonifunction",
+  "General Event",
+];
+
+/** Subset of fonts used on the legacy event admin form. */
+export const eventFontOptions = [
+  "Aclonica",
+  "Anton",
+  "Dancing Script",
+  "Great Vibes",
+  "Lato",
+  "Lobster",
+  "Merriweather",
+  "Open Sans",
+  "Oswald",
+  "Pacifico",
+  "Playfair Display",
+  "PT Sans",
+  "Raleway",
+  "Roboto",
+  "Tangerine",
+  "Ubuntu",
 ];
 
 export const eventQuickActions = ["Preview", "Copy Link", "QR Code", "Edit", "Change Theme", "YouTube", "Share"];
@@ -363,7 +408,14 @@ export const ytEvents = events.slice(0, 5).map((e) => ({
   ytStatus: e.status === "Live" ? "🔴 Live" : e.status === "Completed" ? "⚫ Ended" : "🟡 Scheduled",
 }));
 
-export const wizardStepLabels = ["Event Details", "YouTube", "Theme", "Event Page", "Publish"];
+export const wizardStepLabels = [
+  "Event Details",
+  "YouTube",
+  "Theme",
+  "Theme Content",
+  "Event Page",
+  "Payment",
+];
 
 export function getCustomer(id: number): Customer | undefined {
   return customers.find((c) => c.id === id);

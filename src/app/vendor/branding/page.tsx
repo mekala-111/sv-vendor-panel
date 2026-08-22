@@ -1,6 +1,19 @@
 import ui from "@/components/ui.module.css";
+import { fetchVendorProfile } from "@/lib/server-data";
 
-export default function BrandingPage() {
+export default async function BrandingPage() {
+  const profile = await fetchVendorProfile();
+  const branding = (profile?.branding ?? {}) as {
+    primaryColor?: string;
+    secondaryColor?: string;
+    accentColor?: string;
+    socialLinks?: string;
+  };
+
+  const primary = branding.primaryColor || "#F5820B";
+  const secondary = branding.secondaryColor || "#191310";
+  const accent = branding.accentColor || "#E4362B";
+
   return (
     <>
       <h1 className={ui.pageTitle}>Branding</h1>
@@ -45,38 +58,42 @@ export default function BrandingPage() {
           <div className={ui.grid3}>
             <div>
               <label className={ui.label}>Primary</label>
-              <div className={ui.swatchbox} style={{ background: "#F5820B" }} />
+              <div className={ui.swatchbox} style={{ background: primary }} />
             </div>
             <div>
               <label className={ui.label}>Secondary</label>
-              <div className={ui.swatchbox} style={{ background: "#191310" }} />
+              <div className={ui.swatchbox} style={{ background: secondary }} />
             </div>
             <div>
               <label className={ui.label}>Accent</label>
-              <div className={ui.swatchbox} style={{ background: "#E4362B" }} />
+              <div className={ui.swatchbox} style={{ background: accent }} />
             </div>
           </div>
           <div>
             <label className={ui.label}>Company Name</label>
-            <input className={ui.input} defaultValue="SV Events" />
+            <input className={ui.input} defaultValue={profile?.companyName || ""} placeholder="Company name" />
           </div>
           <div className={ui.grid2}>
             <div>
               <label className={ui.label}>Phone</label>
-              <input className={ui.input} defaultValue="+91 98765 43210" />
+              <input className={ui.input} defaultValue={profile?.phone || ""} placeholder="Phone" />
             </div>
             <div>
               <label className={ui.label}>Email</label>
-              <input className={ui.input} defaultValue="contact@svevents.in" />
+              <input className={ui.input} defaultValue={profile?.email || ""} placeholder="Email" />
             </div>
           </div>
           <div>
             <label className={ui.label}>Address</label>
-            <input className={ui.input} defaultValue="Hyderabad, India" />
+            <input className={ui.input} defaultValue={profile?.address || ""} placeholder="Address" />
           </div>
           <div>
             <label className={ui.label}>Social Links</label>
-            <input className={ui.input} placeholder="Instagram, Facebook URLs" />
+            <input
+              className={ui.input}
+              defaultValue={branding.socialLinks || ""}
+              placeholder="Instagram, Facebook URLs"
+            />
           </div>
         </div>
         <button
