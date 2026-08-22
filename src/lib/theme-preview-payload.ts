@@ -82,7 +82,11 @@ const SAMPLE_LIVE = {
 
 function sampleForLayout(layout: string, themeName: string) {
   const isWedding =
-    layout.includes("wedding") || layout.includes("floral") || layout === "traditional";
+    layout.includes("wedding") ||
+    layout.includes("floral") ||
+    layout === "traditional" ||
+    layout === "the-sacred-garden" ||
+    layout.includes("sacred-garden");
   return {
     ...(isWedding ? SAMPLE_WEDDING : SAMPLE_LIVE),
     pageTitle: themeName,

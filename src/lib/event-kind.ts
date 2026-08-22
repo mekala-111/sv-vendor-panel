@@ -52,6 +52,8 @@ export function isLiveEvent(event: EventKindRow, themeLayoutById: Map<string, st
       layout.includes("wedding") ||
       layout === "traditional" ||
       layout === "floral" ||
+      layout === "the-sacred-garden" ||
+      layout.includes("sacred-garden") ||
       layout === "spiritual" ||
       layout === "birthday" ||
       layout === "minimal"
