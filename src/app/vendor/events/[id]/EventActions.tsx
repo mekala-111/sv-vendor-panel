@@ -11,7 +11,6 @@ import { resolveEventShareImageUrl, shareEventWithImage } from "@/lib/share-even
 
 export function EventQuickActions({
   eventSlug,
-  eventId,
   eventName,
   coverImage,
   invitationCard,
@@ -19,7 +18,6 @@ export function EventQuickActions({
   isLive = false,
 }: {
   eventSlug?: string | null;
-  eventId: string;
   eventName?: string | null;
   coverImage?: string | null;
   invitationCard?: string | null;
@@ -98,27 +96,6 @@ export function EventQuickActions({
         >
           QR Code
         </button>
-        <a
-          className={ui.btnOutlineSm}
-          href={`/vendor/events/new?step=1&eventId=${encodeURIComponent(eventId)}`}
-          style={{ textDecoration: "none" }}
-        >
-          Edit
-        </a>
-        <a
-          className={ui.btnOutlineSm}
-          href={`/vendor/events/new?step=2&eventId=${encodeURIComponent(eventId)}`}
-          style={{ textDecoration: "none" }}
-        >
-          Change Theme
-        </a>
-        <a
-          className={ui.btnOutlineSm}
-          href={`/vendor/events/${eventId}?tab=${encodeURIComponent("Theme Content")}`}
-          style={{ textDecoration: "none" }}
-        >
-          YouTube
-        </a>
         {isLive && liveUrl ? (
           <button type="button" className={ui.btnOutlineSm} onClick={shareEvent}>
             Share

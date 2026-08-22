@@ -160,7 +160,9 @@ export function buildVendorThemePreviewPayload(theme: VendorThemePreview) {
       coverImage: previewImage,
       subEvents: "subEvents" in sample ? sample.subEvents : [],
       status: "UPCOMING",
-      showWatchLive: sections.showLivePlayer !== false,
+      // No sample stream URL — hide the secondary CTA so preview does not show
+      // duplicate "Stream starting soon" on older admin theme builds.
+      showWatchLive: false,
       showSocialShare: false,
       showSubEvents: sections.showSubEvents !== false,
     },
@@ -302,6 +304,10 @@ export function buildEventThemePreviewPayload(
         status: "SCHEDULED",
       }
     : base.youtube;
+
+  // Secondary stream CTA only when a real embed URL exists (avoids duplicate
+  // "Stream starting soon" on admin builds that still render both poster + bottom CTAs).
+  event.showWatchLive = Boolean(youtubeLiveUrl);
 
   return {
     ...base,

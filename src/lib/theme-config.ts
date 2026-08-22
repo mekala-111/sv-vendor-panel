@@ -31,8 +31,8 @@ export type ThemeSections = {
 export const WEDDING_FIELDS: ThemeFieldDef[] = [
   { key: "brideName", label: "Bride name", type: "text", required: true, placeholder: "Priya" },
   { key: "groomName", label: "Groom name", type: "text", required: true, placeholder: "Rahul" },
-  { key: "brideImage", label: "Bride image", type: "image", hint: "Max 2MB", maxBytes: 2 * 1024 * 1024 },
-  { key: "groomImage", label: "Groom image", type: "image", hint: "Max 2MB", maxBytes: 2 * 1024 * 1024 },
+  { key: "brideImage", label: "Bride image", type: "image", hint: "JPEG/PNG/WebP" },
+  { key: "groomImage", label: "Groom image", type: "image", hint: "JPEG/PNG/WebP" },
   { key: "eventDate", label: "Event date", type: "date" },
   { key: "eventTime", label: "Event time", type: "time" },
   { key: "eventPlace", label: "Event place", type: "text", placeholder: "Venue name, city" },
@@ -41,15 +41,14 @@ export const WEDDING_FIELDS: ThemeFieldDef[] = [
     key: "invitationCard",
     label: "Invitation card",
     type: "image",
-    hint: "Full invitation image · max 4MB",
-    maxBytes: 4 * 1024 * 1024,
+    hint: "Full invitation image",
   },
   { key: "galleryImages", label: "Gallery images", type: "gallery", maxItems: 20 },
   { key: "description", label: "Blessing message", type: "textarea", placeholder: "Divine blessings text" },
   { key: "remarks1", label: "Hosts", type: "textarea", placeholder: "Host names on first line, place on second line" },
   { key: "remarks2", label: "Family members", type: "textarea", placeholder: "One paragraph per line" },
-  { key: "logoImage", label: "Host photo 1", type: "image", hint: "Max 2MB", maxBytes: 2 * 1024 * 1024 },
-  { key: "customImage", label: "Host photo 2", type: "image", hint: "Max 2MB", maxBytes: 2 * 1024 * 1024 },
+  { key: "logoImage", label: "Host photo 1", type: "image", hint: "JPEG/PNG/WebP" },
+  { key: "customImage", label: "Host photo 2", type: "image", hint: "JPEG/PNG/WebP" },
 ];
 
 export const LIVE_EVENT_FIELDS: ThemeFieldDef[] = [
@@ -57,7 +56,7 @@ export const LIVE_EVENT_FIELDS: ThemeFieldDef[] = [
   { key: "eventDate", label: "Event date", type: "date" },
   { key: "eventTime", label: "Event time", type: "time" },
   { key: "eventPlace", label: "Venue", type: "text", placeholder: "City or venue" },
-  { key: "coverImage", label: "Cover image", type: "image", hint: "Max 4MB", maxBytes: 4 * 1024 * 1024 },
+  { key: "coverImage", label: "Cover image", type: "image", hint: "JPEG/PNG/WebP" },
   { key: "scrollMessage", label: "Ticker message", type: "textarea", placeholder: "Welcome message" },
   { key: "galleryImages", label: "Gallery images", type: "gallery", maxItems: 12 },
 ];

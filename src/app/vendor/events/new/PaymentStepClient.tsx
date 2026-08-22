@@ -215,10 +215,6 @@ export function PaymentStepClient({
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (!file) return;
-            if (file.size > 4 * 1024 * 1024) {
-              setError("Image must be under 4MB");
-              return;
-            }
             const reader = new FileReader();
             reader.onload = () => setImage(typeof reader.result === "string" ? reader.result : "");
             reader.readAsDataURL(file);

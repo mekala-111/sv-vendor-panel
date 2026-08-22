@@ -146,7 +146,7 @@ export function ImageFileField({
   label,
   hint,
   accept = "image/jpeg,image/jpg,image/png,image/webp",
-  maxBytes = 512000,
+  maxBytes,
   defaultValue = "",
   onValueChange,
 }: {
@@ -154,6 +154,7 @@ export function ImageFileField({
   label: string;
   hint?: string;
   accept?: string;
+  /** Optional size cap in bytes. Omit / 0 = no limit. */
   maxBytes?: number;
   defaultValue?: string;
   onValueChange?: (value: string) => void;
@@ -181,7 +182,7 @@ export function ImageFileField({
         onChange={async (e) => {
           const file = e.target.files?.[0];
           if (!file) return;
-          if (file.size > maxBytes) {
+          if (maxBytes && maxBytes > 0 && file.size > maxBytes) {
             setError(`File too large (${Math.round(file.size / 1024)}KB > ${Math.round(maxBytes / 1024)}KB).`);
             e.target.value = "";
             return;
@@ -231,7 +232,7 @@ export function GalleryImagesField({
   return (
     <div>
       <label className={ui.label}>Gallery images</label>
-      <div className={styles.fieldHint}>Max {max} files · JPEG/JPG/PNG/WebP · up to 4MB each</div>
+      <div className={styles.fieldHint}>Max {max} files · JPEG/JPG/PNG/WebP</div>
       <input type="hidden" name={name} value={JSON.stringify(images)} />
       <input
         type="file"
@@ -246,10 +247,6 @@ export function GalleryImagesField({
             if (next.length >= max) {
               setError(`Maximum ${max} images allowed.`);
               break;
-            }
-            if (file.size > 4 * 1024 * 1024) {
-              setError(`Skipped ${file.name}: exceeds 4MB.`);
-              continue;
             }
             if (!file.type.startsWith("image/")) {
               setError(`Skipped ${file.name}: image files only.`);
@@ -318,14 +315,6 @@ export function SubEventsField({
 
   async function onSubEventImage(index: number, file: File | undefined) {
     if (!file) return;
-    const maxBytes = 4 * 1024 * 1024;
-    if (file.size > maxBytes) {
-      setImageError((prev) => ({
-        ...prev,
-        [index]: `File too large (${Math.round(file.size / 1024)}KB > 4MB).`,
-      }));
-      return;
-    }
     if (!file.type.startsWith("image/")) {
       setImageError((prev) => ({ ...prev, [index]: "Please choose an image file." }));
       return;
@@ -412,7 +401,7 @@ export function SubEventsField({
               <div className={ui.label} style={{ marginBottom: 6 }}>
                 Custom image
               </div>
-              <div className={styles.fieldHint}>Optional · JPEG/PNG/WebP · up to 4MB</div>
+              <div className={styles.fieldHint}>Optional · JPEG/PNG/WebP</div>
               <input
                 type="file"
                 accept="image/jpeg,image/jpg,image/png,image/webp"

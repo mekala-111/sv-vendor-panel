@@ -201,7 +201,6 @@ export default async function EventDetailPage(props: PageProps<"/vendor/events/[
 
       <EventQuickActions
         eventSlug={raw.eventSlug}
-        eventId={eventId}
         eventName={raw.pageTitle || raw.eventName || event.name}
         coverImage={raw.coverImage}
         invitationCard={(raw as { invitationCard?: string | null }).invitationCard}
