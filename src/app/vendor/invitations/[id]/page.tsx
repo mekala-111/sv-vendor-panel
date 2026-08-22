@@ -11,6 +11,7 @@ import {
 import { ThemeContentEditor } from "@/app/vendor/events/ThemeContentEditor";
 import type { VendorThemePreview } from "@/lib/theme-preview-payload";
 import { resolveThemeFields } from "@/lib/theme-config";
+import styles from "@/app/vendor/events/new/wizard.module.css";
 import {
   fetchEventCreationPayment,
   fetchInvitation,
@@ -199,7 +200,7 @@ export default async function InvitationDetailPage(props: PageProps<"/vendor/inv
         ) : null}
 
         {activeTab === "Theme Content" ? (
-          <div>
+          <div className={styles.themeContentTab}>
             {!currentThemeId ? (
               <p style={{ fontSize: 13.5, color: "var(--muted)" }}>
                 No theme assigned yet. Assign a theme when creating the invitation.

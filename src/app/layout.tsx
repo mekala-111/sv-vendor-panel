@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
+import { AppToasts } from "@/components/toast/AppToasts";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -25,7 +26,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={manrope.variable}>
-      <body>{children}</body>
+      <body>
+        <AppToasts>{children}</AppToasts>
+      </body>
     </html>
   );
 }

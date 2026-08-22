@@ -22,13 +22,25 @@ export function Sidebar() {
 
   return (
     <>
-      <button type="button" className={styles.menuBtn} aria-label="Open menu" onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        className={styles.menuBtn}
+        aria-label="Open menu"
+        data-toast-skip
+        onClick={() => setOpen(true)}
+      >
         <span />
         <span />
         <span />
       </button>
       {open ? (
-        <button type="button" className={styles.backdrop} aria-label="Close menu" onClick={() => setOpen(false)} />
+        <button
+          type="button"
+          className={styles.backdrop}
+          aria-label="Close menu"
+          data-toast-skip
+          onClick={() => setOpen(false)}
+        />
       ) : null}
       <div className={`${styles.sidebar} ${open ? styles.open : ""}`}>
         <div className={styles.brandRow}>
@@ -37,7 +49,13 @@ export function Sidebar() {
             <div className={styles.brandName}>SV LIVE</div>
             <div className={styles.brandSub}>EVENTS</div>
           </div>
-          <button type="button" className={styles.closeBtn} aria-label="Close menu" onClick={() => setOpen(false)}>
+          <button
+            type="button"
+            className={styles.closeBtn}
+            aria-label="Close menu"
+            data-toast-skip
+            onClick={() => setOpen(false)}
+          >
             ×
           </button>
         </div>

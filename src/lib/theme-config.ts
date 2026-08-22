@@ -15,7 +15,6 @@ export type ThemeFieldDef = {
   required?: boolean;
   placeholder?: string;
   hint?: string;
-  maxBytes?: number;
   maxItems?: number;
 };
 
@@ -31,8 +30,8 @@ export type ThemeSections = {
 export const WEDDING_FIELDS: ThemeFieldDef[] = [
   { key: "brideName", label: "Bride name", type: "text", required: true, placeholder: "Priya" },
   { key: "groomName", label: "Groom name", type: "text", required: true, placeholder: "Rahul" },
-  { key: "brideImage", label: "Bride image", type: "image", hint: "JPEG/PNG/WebP" },
-  { key: "groomImage", label: "Groom image", type: "image", hint: "JPEG/PNG/WebP" },
+  { key: "brideImage", label: "Bride image", type: "image", hint: "Any size · JPEG/PNG/WebP" },
+  { key: "groomImage", label: "Groom image", type: "image", hint: "Any size · JPEG/PNG/WebP" },
   { key: "eventDate", label: "Event date", type: "date" },
   { key: "eventTime", label: "Event time", type: "time" },
   { key: "eventPlace", label: "Event place", type: "text", placeholder: "Venue name, city" },
@@ -41,14 +40,14 @@ export const WEDDING_FIELDS: ThemeFieldDef[] = [
     key: "invitationCard",
     label: "Invitation card",
     type: "image",
-    hint: "Full invitation image",
+    hint: "Any size · full invitation image",
   },
   { key: "galleryImages", label: "Gallery images", type: "gallery", maxItems: 20 },
   { key: "description", label: "Blessing message", type: "textarea", placeholder: "Divine blessings text" },
   { key: "remarks1", label: "Hosts", type: "textarea", placeholder: "Host names on first line, place on second line" },
   { key: "remarks2", label: "Family members", type: "textarea", placeholder: "One paragraph per line" },
-  { key: "logoImage", label: "Host photo 1", type: "image", hint: "JPEG/PNG/WebP" },
-  { key: "customImage", label: "Host photo 2", type: "image", hint: "JPEG/PNG/WebP" },
+  { key: "logoImage", label: "Host photo 1", type: "image", hint: "Any size · JPEG/PNG/WebP" },
+  { key: "customImage", label: "Host photo 2", type: "image", hint: "Any size · JPEG/PNG/WebP" },
 ];
 
 export const LIVE_EVENT_FIELDS: ThemeFieldDef[] = [
@@ -56,7 +55,7 @@ export const LIVE_EVENT_FIELDS: ThemeFieldDef[] = [
   { key: "eventDate", label: "Event date", type: "date" },
   { key: "eventTime", label: "Event time", type: "time" },
   { key: "eventPlace", label: "Venue", type: "text", placeholder: "City or venue" },
-  { key: "coverImage", label: "Cover image", type: "image", hint: "JPEG/PNG/WebP" },
+  { key: "coverImage", label: "Cover image", type: "image", hint: "Any size · JPEG/PNG/WebP" },
   { key: "scrollMessage", label: "Ticker message", type: "textarea", placeholder: "Welcome message" },
   { key: "galleryImages", label: "Gallery images", type: "gallery", maxItems: 12 },
 ];
@@ -121,9 +120,28 @@ export function resolveThemeFields(theme?: {
   layout?: string;
 } | null): ThemeFieldDef[] {
   const config = theme?.config;
-  if (config?.fields?.length) return config.fields as ThemeFieldDef[];
   const layout = config?.layout || theme?.layout || "wedding-theme-traditional";
-  return LAYOUT_FIELDS[layout] ?? WEDDING_FIELDS;
+  const raw = (config?.fields?.length ? config.fields : LAYOUT_FIELDS[layout] ?? WEDDING_FIELDS) as ThemeFieldDef[];
+  // Drop legacy size caps from theme DB configs (e.g. maxBytes / "Max 2MB" hints).
+  return raw.map((field) => {
+    const next = { ...field } as ThemeFieldDef & { maxBytes?: number; maxWidth?: number; maxHeight?: number };
+    delete next.maxBytes;
+    delete next.maxWidth;
+    delete next.maxHeight;
+    if (typeof next.hint === "string") {
+      const cleaned = next.hint
+        .replace(/\bmax\s*\d+(\.\d+)?\s*(mb|kb|bytes?)\b/gi, "")
+        .replace(/\bmax\s*(width|height|dimension)s?\b[^·|]*/gi, "")
+        .replace(/\s*[·|]\s*[·|]\s*/g, " · ")
+        .replace(/^\s*[·|]\s*|\s*[·|]\s*$/g, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+      next.hint = cleaned || (field.type === "image" ? "Any size · JPEG/PNG/WebP" : undefined);
+    } else if (field.type === "image" && !next.hint) {
+      next.hint = "Any size · JPEG/PNG/WebP";
+    }
+    return next;
+  });
 }
 
 /** Theme content fields for the wizard / editor — includes YouTube fields for live events. */

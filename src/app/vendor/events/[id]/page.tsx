@@ -18,6 +18,7 @@ import {
 } from "@/lib/public-event-url";
 import { PreviewEventButton } from "@/components/PreviewEventButton";
 import { EventQuickActions } from "./EventActions";
+import styles from "@/app/vendor/events/new/wizard.module.css";
 
 const PUBLIC_BASE = getConfiguredPublicEventBase();
 
@@ -292,7 +293,7 @@ export default async function EventDetailPage(props: PageProps<"/vendor/events/[
         ) : null}
 
         {activeTab === "Theme Content" ? (
-          <div>
+          <div className={styles.themeContentTab}>
             {!currentThemeId ? (
               <>
                 <div className={ui.sectionTitle} style={{ marginBottom: 8 }}>

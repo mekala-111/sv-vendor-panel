@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ui from "@/components/ui.module.css";
+import { toast } from "@/components/toast/ToastProvider";
 import {
   getConfiguredPublicEventBase,
   isLoopbackPublicBase,
@@ -49,22 +50,28 @@ export function EventQuickActions({
     try {
       await navigator.clipboard.writeText(liveUrl);
       setCopied(true);
+      toast.success("Link copied");
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
-      /* ignore */
+      toast.error("Could not copy link");
     }
   }
 
   async function shareEvent() {
     if (!liveUrl) return;
     const imageUrl = resolveEventShareImageUrl({ whatsappImage, coverImage, invitationCard });
-    await shareEventWithImage({
-      url: liveUrl,
-      text: `You're invited: ${eventName || "Our event"}\n${liveUrl}`,
-      imageUrl,
-      title: eventName || "Event invitation",
-      fileName: "event-invite.png",
-    });
+    try {
+      await shareEventWithImage({
+        url: liveUrl,
+        text: `You're invited: ${eventName || "Our event"}\n${liveUrl}`,
+        imageUrl,
+        title: eventName || "Event invitation",
+        fileName: "event-invite.png",
+      });
+      toast.success("Share opened");
+    } catch {
+      toast.error("Could not share");
+    }
   }
 
   return (
@@ -77,6 +84,7 @@ export function EventQuickActions({
             target="_blank"
             rel="noreferrer"
             style={{ textDecoration: "none" }}
+            data-toast="Opening live event"
           >
             Open live event
           </a>
@@ -85,19 +93,32 @@ export function EventQuickActions({
             Open live event
           </span>
         )}
-        <button type="button" className={ui.btnOutlineSm} onClick={copyLink} disabled={!liveUrl}>
+        <button
+          type="button"
+          className={ui.btnOutlineSm}
+          onClick={copyLink}
+          disabled={!liveUrl}
+          data-toast-skip
+        >
           {copied ? "Copied" : "Copy Link"}
         </button>
         <button
           type="button"
           className={ui.btnOutlineSm}
-          onClick={() => setShowQr((v) => !v)}
+          onClick={() => {
+            setShowQr((v) => {
+              const next = !v;
+              toast.info(next ? "QR code shown" : "QR code hidden");
+              return next;
+            });
+          }}
           disabled={!liveUrl}
+          data-toast-skip
         >
           QR Code
         </button>
         {isLive && liveUrl ? (
-          <button type="button" className={ui.btnOutlineSm} onClick={shareEvent}>
+          <button type="button" className={ui.btnOutlineSm} onClick={shareEvent} data-toast-skip>
             Share
           </button>
         ) : (

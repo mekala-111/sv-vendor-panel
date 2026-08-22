@@ -53,32 +53,34 @@ export function ThemeContentEditor({
   return (
     <div className={styles.contentEditorLayout}>
       <div className={styles.contentFormPane}>
-        <div className={styles.stepTitle}>{title}</div>
-        {description ? (
-          <p style={{ fontSize: 13, color: "var(--muted-strong)", marginBottom: 16 }}>{description}</p>
-        ) : null}
-        {banner}
-        <form action={formAction}>
-          <input type="hidden" name="eventId" value={eventId} />
-          {hiddenFields
-            ? Object.entries(hiddenFields).map(([key, value]) => (
-                <input key={key} type="hidden" name={key} value={value} />
-              ))
-            : null}
-          <ThemeContentFields fields={fields} raw={raw} onContentChange={setContent} />
-          <div className={styles.footerRow}>
-            {backHref ? (
-              <Link href={backHref} className={styles.backBtn}>
-                Back
-              </Link>
-            ) : (
-              <span />
-            )}
-            <button type="submit" className={backHref ? ui.btnDark : ui.btnPrimary}>
-              {submitLabel}
-            </button>
-          </div>
-        </form>
+        <div className={styles.contentFormScroll}>
+          <div className={styles.stepTitle}>{title}</div>
+          {description ? (
+            <p style={{ fontSize: 13, color: "var(--muted-strong)", marginBottom: 16 }}>{description}</p>
+          ) : null}
+          {banner}
+          <form id="theme-content-form" action={formAction}>
+            <input type="hidden" name="eventId" value={eventId} />
+            {hiddenFields
+              ? Object.entries(hiddenFields).map(([key, value]) => (
+                  <input key={key} type="hidden" name={key} value={value} />
+                ))
+              : null}
+            <ThemeContentFields fields={fields} raw={raw} onContentChange={setContent} />
+          </form>
+        </div>
+        <div className={styles.contentFormFooter}>
+          {backHref ? (
+            <Link href={backHref} className={styles.backBtn}>
+              Back
+            </Link>
+          ) : (
+            <span />
+          )}
+          <button type="submit" form="theme-content-form" className={backHref ? ui.btnDark : ui.btnPrimary}>
+            {submitLabel}
+          </button>
+        </div>
       </div>
 
       <div className={styles.contentPreviewPane}>

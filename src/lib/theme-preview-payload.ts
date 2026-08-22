@@ -165,6 +165,7 @@ export function buildVendorThemePreviewPayload(theme: VendorThemePreview) {
       showWatchLive: false,
       showSocialShare: false,
       showSubEvents: sections.showSubEvents !== false,
+      showInvitationCard: sections.showInvitationCard !== false,
     },
     theme: {
       name: theme.name,
@@ -309,9 +310,36 @@ export function buildEventThemePreviewPayload(
   // "Stream starting soon" on admin builds that still render both poster + bottom CTAs).
   event.showWatchLive = Boolean(youtubeLiveUrl);
 
+  const showInvitationCard = content.showInvitationCard !== false;
+  event.showInvitationCard = showInvitationCard;
+
+  // Production admin themes still gate on theme.config.sections only — mirror the
+  // vendor toggle there so "మా వివాహ ఆహ్వానం" hides immediately in preview.
+  const baseTheme =
+    base.theme && typeof base.theme === "object" ? (base.theme as Record<string, unknown>) : {};
+  const baseConfig =
+    baseTheme.config && typeof baseTheme.config === "object"
+      ? (baseTheme.config as Record<string, unknown>)
+      : {};
+  const baseSections =
+    baseConfig.sections && typeof baseConfig.sections === "object"
+      ? (baseConfig.sections as Record<string, unknown>)
+      : {};
+  const previewTheme = {
+    ...baseTheme,
+    config: {
+      ...baseConfig,
+      sections: {
+        ...baseSections,
+        showInvitationCard,
+      },
+    },
+  };
+
   return {
     ...base,
     event,
+    theme: previewTheme,
     media,
     youtube,
     publicPath: "/event/draft",

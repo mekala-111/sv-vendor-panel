@@ -146,7 +146,6 @@ export function ImageFileField({
   label,
   hint,
   accept = "image/jpeg,image/jpg,image/png,image/webp",
-  maxBytes,
   defaultValue = "",
   onValueChange,
 }: {
@@ -154,8 +153,6 @@ export function ImageFileField({
   label: string;
   hint?: string;
   accept?: string;
-  /** Optional size cap in bytes. Omit / 0 = no limit. */
-  maxBytes?: number;
   defaultValue?: string;
   onValueChange?: (value: string) => void;
 }) {
@@ -182,11 +179,6 @@ export function ImageFileField({
         onChange={async (e) => {
           const file = e.target.files?.[0];
           if (!file) return;
-          if (maxBytes && maxBytes > 0 && file.size > maxBytes) {
-            setError(`File too large (${Math.round(file.size / 1024)}KB > ${Math.round(maxBytes / 1024)}KB).`);
-            e.target.value = "";
-            return;
-          }
           if (!file.type.startsWith("image/")) {
             setError("Please choose an image file.");
             e.target.value = "";
@@ -232,7 +224,7 @@ export function GalleryImagesField({
   return (
     <div>
       <label className={ui.label}>Gallery images</label>
-      <div className={styles.fieldHint}>Max {max} files · JPEG/JPG/PNG/WebP</div>
+      <div className={styles.fieldHint}>Up to {max} files · any size · JPEG/JPG/PNG/WebP</div>
       <input type="hidden" name={name} value={JSON.stringify(images)} />
       <input
         type="file"
@@ -401,7 +393,7 @@ export function SubEventsField({
               <div className={ui.label} style={{ marginBottom: 6 }}>
                 Custom image
               </div>
-              <div className={styles.fieldHint}>Optional · JPEG/PNG/WebP</div>
+              <div className={styles.fieldHint}>Optional · any size · JPEG/PNG/WebP</div>
               <input
                 type="file"
                 accept="image/jpeg,image/jpg,image/png,image/webp"

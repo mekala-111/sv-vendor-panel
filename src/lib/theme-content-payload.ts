@@ -86,6 +86,9 @@ export function buildThemeContentPayload(
   if (subEvents) payload.subEvents = subEvents;
   const showSubEvents = String(formData.get("showSubEvents") ?? "true");
   payload.showSubEvents = showSubEvents !== "false";
+  if (formData.has("showInvitationCard")) {
+    payload.showInvitationCard = String(formData.get("showInvitationCard")) !== "false";
+  }
   if (payload.eventPlace) payload.location = payload.eventPlace;
 
   if (kind === "live") {

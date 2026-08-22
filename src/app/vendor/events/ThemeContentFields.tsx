@@ -31,6 +31,10 @@ export function initThemeContent(raw: Record<string, unknown>, fields: ThemeFiel
   if (hasSubEventsField) {
     content.showSubEvents = raw.showSubEvents !== false;
   }
+  const hasInvitationCardField = fields.some((field) => field.key === "invitationCard");
+  if (hasInvitationCardField) {
+    content.showInvitationCard = raw.showInvitationCard !== false;
+  }
   for (const field of fields) {
     if (field.type === "subEvents") {
       content.subEvents = Array.isArray(raw.subEvents) ? raw.subEvents : [];
@@ -109,6 +113,7 @@ export function ThemeContentFields({
                   role="switch"
                   aria-checked={showSubEvents}
                   aria-label="Show sub events on invitation"
+                  data-toast="Sub events"
                   className={`${styles.toggleSwitch} ${showSubEvents ? styles.toggleSwitchOn : ""}`}
                   onClick={() => patch("showSubEvents", !showSubEvents)}
                 >
@@ -143,13 +148,51 @@ export function ThemeContentFields({
         }
 
         if (field.type === "image") {
+          if (field.key === "invitationCard") {
+            const showInvitationCard = content.showInvitationCard !== false;
+            return (
+              <div key={field.key}>
+                <div className={styles.subEventsToggleRow}>
+                  <div>
+                    <div className={ui.label}>Invitation card</div>
+                    <div className={styles.fieldHint}>Show the envelope invitation section on the theme</div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showInvitationCard}
+                    aria-label="Show invitation card on theme"
+                    data-toast="Invitation card"
+                    className={`${styles.toggleSwitch} ${showInvitationCard ? styles.toggleSwitchOn : ""}`}
+                    onClick={() => patch("showInvitationCard", !showInvitationCard)}
+                  >
+                    <span className={styles.toggleKnob} />
+                  </button>
+                </div>
+                <input
+                  type="hidden"
+                  name="showInvitationCard"
+                  value={showInvitationCard ? "true" : "false"}
+                />
+                <div style={{ display: showInvitationCard ? undefined : "none" }}>
+                  <ImageFileField
+                    name={field.key}
+                    label="Card image"
+                    hint={field.hint}
+                    defaultValue={String(content[field.key] ?? "")}
+                    onValueChange={(value) => patch(field.key, value)}
+                  />
+                </div>
+              </div>
+            );
+          }
+
           return (
             <ImageFileField
               key={field.key}
               name={field.key}
               label={field.label}
               hint={field.hint}
-              maxBytes={field.maxBytes}
               defaultValue={String(content[field.key] ?? "")}
               onValueChange={(value) => patch(field.key, value)}
             />
