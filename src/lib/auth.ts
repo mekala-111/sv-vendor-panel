@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { apiFetch, apiLogin, AUTH_COOKIE, REFRESH_COOKIE } from "./api";
+import { apiFetch, apiLogin, AUTH_COOKIE, REFRESH_COOKIE, seedAccessTokenCache } from "./api";
 import { cookieSecureFlag } from "./session-cookies";
 
 const VENDOR_BASE =
@@ -49,6 +49,7 @@ export async function login(formData: FormData) {
     };
     store.set(AUTH_COOKIE, data.accessToken, cookieOpts);
     store.set(REFRESH_COOKIE, data.refreshToken, cookieOpts);
+    seedAccessTokenCache(data.accessToken);
     // legacy cookie name kept so old proxy matcher still works during transition
     store.set("vendor_session", data.user.email, cookieOpts);
   } catch (err) {

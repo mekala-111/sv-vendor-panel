@@ -13,7 +13,19 @@ import {
 import styles from "@/app/vendor/events/new/wizard.module.css";
 
 function fieldDefaultValue(key: string, raw: Record<string, unknown>, type?: ThemeFieldDef["type"]): string {
-  const v = raw[key];
+  const aliases: Record<string, string[]> = {
+    eventPlace: ["location"],
+    eventTime: ["liveTiming"],
+  };
+  let v = raw[key];
+  if (v == null && aliases[key]) {
+    for (const alt of aliases[key]) {
+      if (raw[alt] != null && raw[alt] !== "") {
+        v = raw[alt];
+        break;
+      }
+    }
+  }
   if (v == null) return "";
   if (key === "eventDate" && typeof v === "string" && v.includes("T")) {
     return new Date(v).toISOString().slice(0, 10);

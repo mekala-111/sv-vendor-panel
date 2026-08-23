@@ -2,8 +2,22 @@ import Link from "next/link";
 import { Badge } from "@/components/Badge";
 import ui from "@/components/ui.module.css";
 import { fetchCustomers } from "@/lib/server-data";
+import type { Customer } from "@/lib/data";
 
-const COLS = "1.8fr 1fr 1.2fr 1fr";
+const COLS = "1.8fr 1.2fr 1fr 1fr 1fr";
+
+function contentStatusLabel(status: Customer["contentStatus"]) {
+  switch (status) {
+    case "SUBMITTED":
+      return "Content received";
+    case "AWAITING_CONTENT":
+      return "Awaiting content";
+    case "THEME_PENDING":
+      return "Theme pending";
+    default:
+      return "—";
+  }
+}
 
 export default async function CustomersPage() {
   const customers = await fetchCustomers();
@@ -12,18 +26,24 @@ export default async function CustomersPage() {
     <>
       <h1 className={ui.pageTitle}>Customers</h1>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14, flexWrap: "wrap", gap: 12 }}>
-        <button className={ui.btnPrimary}>+ Add Customer</button>
+        <Link href="/vendor/customers/new" className={ui.btnPrimary} style={{ textDecoration: "none" }}>
+          + Add Customer
+        </Link>
       </div>
       <div className={ui.cardTight}>
         <div className={ui.tableHead} style={{ gridTemplateColumns: COLS }}>
           <div>CUSTOMER</div>
+          <div>CONTENT</div>
           <div>EVENTS</div>
           <div>TOTAL SPEND</div>
           <div>STATUS</div>
         </div>
         {customers.length === 0 ? (
           <div style={{ padding: "24px 0", textAlign: "center", color: "var(--muted)", fontSize: 13.5 }}>
-            No customers yet.
+            No customers yet.{" "}
+            <Link href="/vendor/customers/new" style={{ color: "var(--accent)" }}>
+              Add your first customer
+            </Link>
           </div>
         ) : (
           customers.map((c) => (
@@ -36,6 +56,18 @@ export default async function CustomersPage() {
               <div>
                 <div style={{ fontWeight: 700 }}>{c.name}</div>
                 <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{c.email}</div>
+                {c.draftInvitationName ? (
+                  <div style={{ fontSize: 11, color: "var(--muted-strong)", marginTop: 2 }}>
+                    {c.draftInvitationName}
+                  </div>
+                ) : null}
+              </div>
+              <div>
+                {c.contentStatus && c.contentStatus !== "NONE" ? (
+                  <Badge label={contentStatusLabel(c.contentStatus)} />
+                ) : (
+                  <span style={{ color: "var(--muted)", fontSize: 13 }}>—</span>
+                )}
               </div>
               <div>{c.events}</div>
               <div style={{ fontWeight: 600 }}>{c.spend}</div>

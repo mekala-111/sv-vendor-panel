@@ -17,7 +17,13 @@ export function wizardMaxStep(_kind: EventWizardKind): number {
   return 5;
 }
 
-export function wizardStepLabels(kind: EventWizardKind): string[] {
+export function wizardStepLabels(
+  kind: EventWizardKind,
+  options?: { fromCustomer?: boolean }
+): string[] {
+  if (kind === "live" && options?.fromCustomer) {
+    return ["Event Details", "Theme Content", "Payment", "Live Event Created"];
+  }
   if (kind === "live") {
     return [
       "Event Details",
@@ -28,6 +34,30 @@ export function wizardStepLabels(kind: EventWizardKind): string[] {
     ];
   }
   return ["Event Details", "Theme", "Theme Content", "Event Page", "Payment"];
+}
+
+export function wizardDisplayStep(
+  kind: EventWizardKind,
+  internalStep: number,
+  fromCustomer?: boolean
+): number {
+  if (kind !== "live" || !fromCustomer) return internalStep;
+  if (internalStep <= 1) return 1;
+  if (internalStep === 3) return 2;
+  if (internalStep === 4) return 3;
+  return 4;
+}
+
+export function wizardInternalStep(
+  kind: EventWizardKind,
+  displayStep: number,
+  fromCustomer?: boolean
+): number {
+  if (kind !== "live" || !fromCustomer) return displayStep;
+  if (displayStep <= 1) return 1;
+  if (displayStep === 2) return 3;
+  if (displayStep === 3) return 4;
+  return 5;
 }
 
 export function parseWizardStep(raw: string | string[] | undefined, kind: EventWizardKind): number {
@@ -45,12 +75,19 @@ export function wizardTitle(kind: EventWizardKind) {
 export function wizardStepUrl(
   kind: EventWizardKind,
   step: number,
-  eventId?: string | null
+  eventId?: string | null,
+  extra?: Record<string, string | undefined>
 ) {
   const base = wizardBasePath(kind);
-  if (step === 1 && !eventId) return `${base}?step=1`;
-  if (!eventId) return `${base}?step=1`;
-  return `${base}?step=${step}&eventId=${encodeURIComponent(eventId)}`;
+  const sp = new URLSearchParams();
+  sp.set("step", String(step));
+  if (eventId) sp.set("eventId", eventId);
+  if (extra) {
+    for (const [key, value] of Object.entries(extra)) {
+      if (value) sp.set(key, value);
+    }
+  }
+  return `${base}?${sp.toString()}`;
 }
 
 export function creationFeeForKind(

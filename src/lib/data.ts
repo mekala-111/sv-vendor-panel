@@ -15,6 +15,8 @@ export const TONES = {
 export interface CustomerEvent {
   name: string;
   date: string;
+  /** Backend event UUID for linking to event detail. */
+  _id?: string;
 }
 export interface CustomerPayment {
   desc: string;
@@ -38,6 +40,11 @@ export interface Customer {
   activity: CustomerActivity[];
   /** Backend UUID when loaded from API */
   _id?: string;
+  contentStatus?: "NONE" | "THEME_PENDING" | "AWAITING_CONTENT" | "SUBMITTED";
+  contentFillUrl?: string | null;
+  draftInvitationId?: string | null;
+  draftInvitationName?: string | null;
+  contentFilledAt?: string | null;
 }
 
 const STATUS_TONE: Record<string, keyof typeof TONES> = {
@@ -59,6 +66,9 @@ const STATUS_TONE: Record<string, keyof typeof TONES> = {
   Closed: "gray",
   Credit: "green",
   Debit: "red",
+  "Content received": "green",
+  "Awaiting content": "yellow",
+  "Theme pending": "blue",
 };
 
 export function statusTone(status: string): StatusTone {
@@ -301,7 +311,7 @@ export function eventDetailTabContent(ev: EventRecord, tab: EventDetailTab): str
   }
 }
 
-export const customerTabs = ["Overview", "Events", "Payments", "Activity"] as const;
+export const customerTabs = ["Overview", "Events"] as const;
 export type CustomerTab = (typeof customerTabs)[number];
 
 export const walletBalance = "₹24,680.00";

@@ -12,6 +12,7 @@ import { ThemeContentEditor } from "@/app/vendor/events/ThemeContentEditor";
 import type { VendorThemePreview } from "@/lib/theme-preview-payload";
 import { resolveWizardThemeFields } from "@/lib/theme-config";
 import { withResolvedThemeSectionToggles } from "@/lib/theme-section-toggles";
+import { normalizeThemeContentRaw } from "@/lib/customer-live-event";
 import { fetchEvent, fetchEventCreationPayment, fetchThemes } from "@/lib/server-data";
 import {
   buildPublicEventPathUrl,
@@ -71,7 +72,7 @@ export default async function EventDetailPage(props: PageProps<"/vendor/events/[
   const streams = raw.youtubeStreams ?? [];
   const stream = streams[0];
   const contentRaw = withResolvedThemeSectionToggles({
-    ...(raw as Record<string, unknown>),
+    ...normalizeThemeContentRaw(raw as Record<string, unknown>),
     youtubeLiveUrl: raw.youtubeLiveUrl || stream?.youtubeLiveUrl || "",
     youtubeLiveKey: stream?.youtubeLiveKey || "",
     teaserUrl: raw.teaserUrl ?? "",

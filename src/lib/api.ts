@@ -12,6 +12,31 @@ const VENDOR_BASE =
 export const AUTH_COOKIE = "sv_vendor_access";
 export const REFRESH_COOKIE = "sv_vendor_refresh";
 
+/** Reuse refreshed access token across chained server-action API calls in the same process. */
+let cachedAccessToken: string | null = null;
+let cachedAccessTokenAt = 0;
+const ACCESS_TOKEN_CACHE_MS = 120_000;
+
+function rememberAccessToken(token: string) {
+  cachedAccessToken = token;
+  cachedAccessTokenAt = Date.now();
+}
+
+/** Call after login so the first server-action API chain uses the new JWT. */
+export function seedAccessTokenCache(token: string) {
+  rememberAccessToken(token);
+}
+
+async function resolveAccessToken(override?: string): Promise<string | null> {
+  if (override) return override;
+  if (cachedAccessToken && Date.now() - cachedAccessTokenAt < ACCESS_TOKEN_CACHE_MS) {
+    return cachedAccessToken;
+  }
+  const token = await getAccessToken();
+  if (token) rememberAccessToken(token);
+  return token;
+}
+
 type ApiEnvelope<T> = {
   success: boolean;
   data: T;
@@ -69,6 +94,7 @@ async function refreshAccessToken(): Promise<string | null> {
   } catch {
     /* proxy/middleware will persist on next navigation */
   }
+  rememberAccessToken(json.data.accessToken);
   return json.data.accessToken;
 }
 
@@ -86,7 +112,7 @@ export async function apiFetch<T>(
   h.set("Content-Type", "application/json");
 
   if (auth) {
-    const token = accessTokenOverride ?? (await getAccessToken());
+    const token = await resolveAccessToken(accessTokenOverride);
     if (token) h.set("Authorization", `Bearer ${token}`);
   }
 

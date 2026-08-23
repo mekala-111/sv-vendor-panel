@@ -12,6 +12,14 @@ import {
   wizardTitle,
 } from "@/lib/event-wizard";
 import {
+  customerWizardSearchParams,
+  draftToLiveEventStep1,
+  mergeCustomerDraftForThemeContent,
+  normalizeThemeContentRaw,
+  parseCustomerWizardQuery,
+} from "@/lib/customer-live-event";
+import {
+  ensureCustomerDraftOnLiveEvent,
   submitEventDetails,
   submitEventPageStep,
   submitThemeContentStep,
@@ -21,6 +29,7 @@ import { fetchEvent, fetchInvitation, fetchThemes, fetchVendorProfile } from "@/
 import { ThemePreviewImage } from "@/components/ThemePreviewImage";
 import { PreviewEventButton } from "@/components/PreviewEventButton";
 import { resolveWizardThemeFields } from "@/lib/theme-config";
+import { withResolvedThemeSectionToggles } from "@/lib/theme-section-toggles";
 import { ThemeContentEditor } from "@/app/vendor/events/ThemeContentEditor";
 import { normalizeTimeForInput } from "@/lib/time-input";
 import type { VendorThemePreview } from "@/lib/theme-preview-payload";
@@ -52,24 +61,69 @@ export async function CreateEventWizard({
   const step = parseWizardStep(sp.step, kind);
   const eventId = Array.isArray(sp.eventId) ? sp.eventId[0] : sp.eventId;
   const error = Array.isArray(sp.error) ? sp.error[0] : sp.error;
+  const errorMsg = Array.isArray(sp.msg) ? sp.msg[0] : sp.msg;
+  const customerQuery = parseCustomerWizardQuery(sp);
+  const fromCustomer = Boolean(customerQuery.fromCustomer && kind === "live");
+  const customerExtra = customerWizardSearchParams(customerQuery);
 
-  if (step > 1 && !eventId) {
-    redirect(wizardStepUrl(kind, 1));
+  if (fromCustomer && step === 2 && eventId) {
+    redirect(wizardStepUrl(kind, 3, eventId, customerExtra));
   }
 
-  const [themes, record, profile] = await Promise.all([
-    fetchThemes(),
+  if (step > 1 && !eventId) {
+    redirect(wizardStepUrl(kind, 1, null, customerExtra));
+  }
+
+  const sourceDraftPromise =
+    fromCustomer && customerQuery.sourceDraftId && (step === 1 || step === 3) && !eventId
+      ? customerQuery.sourceDraftKind === "event"
+        ? fetchEvent(customerQuery.sourceDraftId)
+        : fetchInvitation(customerQuery.sourceDraftId)
+      : fromCustomer && customerQuery.sourceDraftId && step === 3 && eventId
+        ? customerQuery.sourceDraftKind === "event"
+          ? fetchEvent(customerQuery.sourceDraftId)
+          : fetchInvitation(customerQuery.sourceDraftId)
+        : Promise.resolve(null);
+
+  let recordPromise: ReturnType<typeof fetchEvent> | ReturnType<typeof fetchInvitation> | Promise<null> =
     eventId
       ? kind === "invitation"
         ? fetchInvitation(eventId)
         : fetchEvent(eventId)
-      : Promise.resolve(null),
+      : Promise.resolve(null);
+
+  if (
+    fromCustomer &&
+    customerQuery.sourceDraftId &&
+    step === 3 &&
+    eventId &&
+    kind === "live"
+  ) {
+    recordPromise = ensureCustomerDraftOnLiveEvent(
+      eventId,
+      customerQuery.sourceDraftId,
+      customerQuery.sourceDraftKind ?? "invitation"
+    );
+  }
+
+  const [themes, record, profile, sourceDraft] = await Promise.all([
+    fetchThemes(),
+    recordPromise,
     fetchVendorProfile(),
+    sourceDraftPromise,
   ]);
 
   if (step > 1 && eventId && !record) {
-    redirect(`${wizardStepUrl(kind, 1)}&error=1`);
+    redirect(`${wizardStepUrl(kind, 1, null, customerExtra)}&error=1`);
   }
+
+  const step1Prefill =
+    fromCustomer && sourceDraft?.raw
+      ? draftToLiveEventStep1(
+          sourceDraft.raw as Record<string, unknown>,
+          customerQuery.customerId
+        )
+      : null;
 
   const availableThemes = filterThemesForWizardKind(themes, kind);
   const eventCreationFee = creationFeeForKind(profile, kind);
@@ -101,25 +155,45 @@ export async function CreateEventWizard({
       ? buildPublicInvitationPathUrl(PUBLIC_BASE, slug)
       : buildPublicEventPathUrl(PUBLIC_BASE, slug);
   const displayHost = publicUrl.replace(/^https?:\/\//, "");
-  const selectedTheme = themes.find((t) => t._id === raw.themeId);
+  const draftRaw = (sourceDraft?.raw ?? null) as Record<string, unknown> | null;
+  const eventRaw = raw as Record<string, unknown>;
+  const mergedForContent =
+    fromCustomer && draftRaw
+      ? mergeCustomerDraftForThemeContent(draftRaw, eventRaw)
+      : normalizeThemeContentRaw(eventRaw);
+
+  const selectedThemeId =
+    mergedForContent.themeId ||
+    (mergedForContent.themeConfig as { themeId?: string } | undefined)?.themeId;
+  const selectedTheme = themes.find((t) => t._id === selectedThemeId);
   const themeFields = resolveWizardThemeFields(selectedTheme ?? null, kind);
   const stream = raw.youtubeStreams?.[0];
-  const contentRaw = {
-    ...(raw as Record<string, unknown>),
+  const contentRaw = withResolvedThemeSectionToggles({
+    ...mergedForContent,
     youtubeLiveUrl: raw.youtubeLiveUrl || stream?.youtubeLiveUrl || "",
     youtubeLiveKey: stream?.youtubeLiveKey || "",
     teaserUrl: raw.teaserUrl ?? "",
-  };
+  });
   const typeOptions = Array.from(
     new Set([...eventTypeOptions, ...(raw.eventType ? [raw.eventType] : [])])
   );
-  const wizardHiddenFields = { wizardKind: kind };
+  const wizardHiddenFields = { wizardKind: kind, ...customerExtra };
   const detailsLabel = kind === "invitation" ? "Invitation name" : "Live event name";
   const themeStep = 2;
   const contentStep = 3;
   const pageStep = kind === "live" ? null : 4;
   const paymentStep = kind === "live" ? 4 : 5;
   const createdStep = kind === "live" ? 5 : null;
+  const detailsDefaults = step1Prefill ?? {
+    eventName: raw.eventName ?? "",
+    eventType: raw.eventType ?? typeOptions[0],
+    eventDate: raw.eventDate ? new Date(raw.eventDate).toISOString().slice(0, 10) : "",
+    pageTitle: raw.pageTitle ?? "",
+    location: raw.location ?? "",
+    liveTiming: normalizeTimeForInput(String(raw.liveTiming ?? "")),
+    coverImage: raw.coverImage ?? "",
+    customerId: raw.customerId ?? customerQuery.customerId ?? "",
+  };
   const detailsPlaceholder =
     kind === "invitation" ? "e.g. Rahul & Priya Wedding Invitation" : "e.g. Annual Business Conference";
   const paymentCopy =
@@ -130,16 +204,23 @@ export async function CreateEventWizard({
   return (
     <>
       <h1 className={ui.pageTitle}>{wizardTitle(kind)}</h1>
-      <WizardStepper current={step} eventId={eventId} kind={kind} />
+      <WizardStepper
+        current={step}
+        eventId={eventId}
+        kind={kind}
+        fromCustomer={fromCustomer}
+        queryExtra={customerExtra}
+      />
 
-      {error ? (
+      {error || errorMsg ? (
         <p
           style={{ color: "#E4362B", fontSize: 13, marginBottom: 14, textAlign: "center" }}
           role="alert"
         >
-          {error === "pay"
-            ? "Payment failed or was cancelled. The event was not created. Please try again."
-            : "Something went wrong on this step. Please check the fields and try again."}
+          {errorMsg ||
+            (error === "pay"
+              ? "Payment failed or was cancelled. The event was not created. Please try again."
+              : "Something went wrong on this step. Please check the fields and try again.")}
         </p>
       ) : null}
 
@@ -149,6 +230,22 @@ export async function CreateEventWizard({
           <form action={submitEventDetails}>
             <input type="hidden" name="wizardKind" value={kind} />
             {eventId ? <input type="hidden" name="eventId" value={eventId} /> : null}
+            {fromCustomer ? (
+              <>
+                <input type="hidden" name="fromCustomer" value="1" />
+                {customerQuery.sourceDraftId ? (
+                  <input type="hidden" name="sourceDraftId" value={customerQuery.sourceDraftId} />
+                ) : null}
+                <input
+                  type="hidden"
+                  name="sourceDraftKind"
+                  value={customerQuery.sourceDraftKind ?? "invitation"}
+                />
+              </>
+            ) : null}
+            {detailsDefaults.customerId ? (
+              <input type="hidden" name="customerId" value={String(detailsDefaults.customerId)} />
+            ) : null}
             <div className={styles.formGrid}>
               <div>
                 <label className={ui.label} htmlFor="eventName">
@@ -161,7 +258,7 @@ export async function CreateEventWizard({
                   placeholder={detailsPlaceholder}
                   required
                   minLength={2}
-                  defaultValue={raw.eventName ?? ""}
+                  defaultValue={detailsDefaults.eventName}
                 />
               </div>
 
@@ -173,7 +270,7 @@ export async function CreateEventWizard({
                   id="eventType"
                   name="eventType"
                   className={ui.input}
-                  defaultValue={raw.eventType ?? typeOptions[0]}
+                  defaultValue={detailsDefaults.eventType ?? typeOptions[0]}
                 >
                   {typeOptions.map((t) => (
                     <option key={t} value={t}>
@@ -193,9 +290,7 @@ export async function CreateEventWizard({
                   type="date"
                   className={ui.input}
                   required
-                  defaultValue={
-                    raw.eventDate ? new Date(raw.eventDate).toISOString().slice(0, 10) : ""
-                  }
+                  defaultValue={detailsDefaults.eventDate}
                 />
               </div>
 
@@ -209,13 +304,13 @@ export async function CreateEventWizard({
                   className={ui.input}
                   placeholder="Rahul Weds Priya"
                   required
-                  defaultValue={raw.pageTitle ?? ""}
+                  defaultValue={detailsDefaults.pageTitle}
                 />
               </div>
 
               <div>
                 <label className={ui.label}>Cover image</label>
-                <CoverImageDropzone defaultValue={raw.coverImage ?? ""} />
+                <CoverImageDropzone defaultValue={detailsDefaults.coverImage ?? ""} />
               </div>
 
               {kind === "live" ? (
@@ -229,7 +324,7 @@ export async function CreateEventWizard({
                       name="liveTiming"
                       type="time"
                       className={ui.input}
-                      defaultValue={normalizeTimeForInput(String(raw.liveTiming ?? ""))}
+                      defaultValue={detailsDefaults.liveTiming}
                     />
                   </div>
                   <div>
@@ -241,14 +336,27 @@ export async function CreateEventWizard({
                       name="location"
                       className={ui.input}
                       placeholder="Venue or city"
-                      defaultValue={raw.location ?? ""}
+                      defaultValue={detailsDefaults.location}
                     />
                   </div>
                 </>
               ) : null}
             </div>
+            {fromCustomer ? (
+              <p style={{ fontSize: 13, color: "var(--muted-strong)", marginBottom: 16 }}>
+                Customer theme is applied automatically. Review and edit theme content on the next
+                step.
+              </p>
+            ) : null}
             <div className={styles.footerRow}>
-              <Link href={wizardListPath(kind)} className={styles.backBtn}>
+              <Link
+                href={
+                  fromCustomer && customerQuery.customerId
+                    ? `/vendor/customers/${customerQuery.customerId}?tab=Events`
+                    : wizardListPath(kind)
+                }
+                className={styles.backBtn}
+              >
                 Cancel
               </Link>
               <button type="submit" className={ui.btnDark}>
@@ -259,7 +367,7 @@ export async function CreateEventWizard({
         </div>
       )}
 
-      {step === themeStep && eventId ? (
+      {step === themeStep && eventId && !fromCustomer ? (
         <div className={`${styles.panel} ${styles.widePanel}`}>
           <div className={styles.stepTitle}>
             {kind === "live" ? "Select Theme" : "Design & Theme"}
@@ -343,10 +451,15 @@ export async function CreateEventWizard({
             <div className={styles.panel}>
               <div className={styles.stepTitle}>Theme Content</div>
               <p style={{ fontSize: 13, color: "var(--muted-strong)", marginBottom: 16 }}>
-                Select a theme in step {themeStep} before filling theme content.
+                {fromCustomer
+                  ? "Could not load the customer theme. Go back and try again."
+                  : `Select a theme in step ${themeStep} before filling theme content.`}
               </p>
-              <Link href={wizardStepUrl(kind, themeStep, eventId)} className={styles.backBtn}>
-                Back to theme selection
+              <Link
+                href={wizardStepUrl(kind, fromCustomer ? 1 : themeStep, eventId, customerExtra)}
+                className={styles.backBtn}
+              >
+                {fromCustomer ? "Back to event details" : "Back to theme selection"}
               </Link>
             </div>
           ) : (
@@ -356,13 +469,15 @@ export async function CreateEventWizard({
               raw={contentRaw}
               theme={selectedTheme as VendorThemePreview}
               formAction={submitThemeContentStep}
-              backHref={wizardStepUrl(kind, themeStep, eventId)}
+              backHref={wizardStepUrl(kind, fromCustomer ? 1 : themeStep, eventId, customerExtra)}
               hiddenFields={wizardHiddenFields}
               submitLabel="Next"
               description={
-                kind === "live"
-                  ? `Page content and YouTube live details for ${selectedTheme.name}.`
-                  : `Content for ${selectedTheme.name} — couple photos, schedule, invitation, and gallery.`
+                fromCustomer
+                  ? `Review content copied from the customer invitation for ${selectedTheme.name}. Add YouTube live details if needed.`
+                  : kind === "live"
+                    ? `Page content and YouTube live details for ${selectedTheme.name}.`
+                    : `Content for ${selectedTheme.name} — couple photos, schedule, invitation, and gallery.`
               }
             />
           )}
@@ -431,7 +546,8 @@ export async function CreateEventWizard({
               href={wizardStepUrl(
                 kind,
                 kind === "live" ? contentStep : (pageStep ?? contentStep),
-                eventId
+                eventId,
+                customerExtra
               )}
               className={styles.backBtn}
             >

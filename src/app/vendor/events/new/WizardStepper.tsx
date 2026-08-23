@@ -1,25 +1,41 @@
 import Link from "next/link";
 import type { EventWizardKind } from "@/lib/event-wizard";
-import { wizardStepLabels, wizardStepUrl } from "@/lib/event-wizard";
+import {
+  wizardInternalStep,
+  wizardStepLabels,
+  wizardStepUrl,
+} from "@/lib/event-wizard";
 import styles from "./wizard.module.css";
 
 export function WizardStepper({
   current,
   eventId,
   kind,
+  fromCustomer = false,
+  queryExtra,
 }: {
   current: number;
   eventId?: string | null;
   kind: EventWizardKind;
+  fromCustomer?: boolean;
+  queryExtra?: Record<string, string | undefined>;
 }) {
+  const labels = wizardStepLabels(kind, { fromCustomer });
+
   return (
     <div className={styles.stepsRow}>
-      {wizardStepLabels(kind).map((label, index) => {
-        const step = index + 1;
-        const done = step < current;
-        const active = step === current;
-        const canJump = Boolean(eventId) && step <= current;
-        const href = canJump || (step === 1 && !eventId) ? wizardStepUrl(kind, step, eventId) : null;
+      {labels.map((label, index) => {
+        const displayStep = index + 1;
+        const internalStep = fromCustomer
+          ? wizardInternalStep(kind, displayStep, true)
+          : displayStep;
+        const done = internalStep < current;
+        const active = internalStep === current;
+        const canJump = Boolean(eventId) && internalStep <= current;
+        const href =
+          canJump || (internalStep === 1 && !eventId)
+            ? wizardStepUrl(kind, internalStep, eventId, queryExtra)
+            : null;
 
         const circle = (
           <div
@@ -29,7 +45,7 @@ export function WizardStepper({
               color: done || active ? "#fff" : "#9A9088",
             }}
           >
-            {step}
+            {fromCustomer ? displayStep : internalStep}
           </div>
         );
 

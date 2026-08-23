@@ -4,6 +4,14 @@ import { redirect } from "next/navigation";
 import { buildThemeContentPayload, extraThemeFields } from "./theme-content-payload";
 import { type EventWizardKind, parseWizardKind, wizardBasePath } from "./event-wizard";
 import {
+  type CustomerDraftKind,
+  customerWizardSearchParams,
+  liveWizardStepAfterDetails,
+  recordHasThemeContent,
+  themeContentFromRecord,
+} from "./customer-live-event";
+import { isAuthSessionError } from "./auth-errors";
+import {
   createEventAction,
   createInvitationAction,
   fetchEvent,
@@ -55,6 +63,74 @@ function optionalStr(formData: FormData, key: string) {
   return v || undefined;
 }
 
+async function applyCustomerDraftToLiveEvent(
+  liveEventId: string,
+  sourceDraftId: string,
+  sourceDraftKind: CustomerDraftKind
+) {
+  const source =
+    sourceDraftKind === "event"
+      ? await fetchEvent(sourceDraftId)
+      : await fetchInvitation(sourceDraftId);
+  if (!source?.raw) return;
+
+  const raw = source.raw as Record<string, unknown>;
+  const themeConfig =
+    raw.themeConfig && typeof raw.themeConfig === "object"
+      ? (raw.themeConfig as Record<string, unknown>)
+      : null;
+  const themeId = String(themeConfig?.themeId || raw.themeId || "").trim();
+
+  if (themeId) {
+    const prevCustom =
+      themeConfig?.customConfig && typeof themeConfig.customConfig === "object"
+        ? (themeConfig.customConfig as Record<string, unknown>)
+        : {};
+    await setEventThemeAction(liveEventId, {
+      themeId,
+      customConfig: prevCustom,
+      ...(themeConfig?.primaryColor ? { primaryColor: themeConfig.primaryColor as string } : {}),
+      ...(themeConfig?.secondaryColor ? { secondaryColor: themeConfig.secondaryColor as string } : {}),
+      ...(themeConfig?.accentColor ? { accentColor: themeConfig.accentColor as string } : {}),
+    });
+  }
+
+  const content = themeContentFromRecord(raw);
+  if (themeId) content.themeId = themeId;
+  await updateEventAction(liveEventId, content);
+}
+
+/** Apply customer draft theme/content to a live event once (step 3), skipping if already present. */
+export async function ensureCustomerDraftOnLiveEvent(
+  liveEventId: string,
+  sourceDraftId: string,
+  sourceDraftKind: CustomerDraftKind
+) {
+  const live = await fetchEvent(liveEventId);
+  if (!live?.raw) return live;
+  const liveRaw = live.raw as Record<string, unknown>;
+  const themeId =
+    liveRaw.themeId ||
+    ((liveRaw.themeConfig as { themeId?: string } | undefined)?.themeId ?? "");
+  const hasContent = recordHasThemeContent(liveRaw);
+  if (themeId && hasContent) return live;
+
+  await applyCustomerDraftToLiveEvent(liveEventId, sourceDraftId, sourceDraftKind);
+  return fetchEvent(liveEventId);
+}
+
+function customerWizardParamsFromForm(formData: FormData) {
+  const fromCustomer = String(formData.get("fromCustomer") ?? "") === "1";
+  if (!fromCustomer) return {};
+  return customerWizardSearchParams({
+    fromCustomer: true,
+    customerId: optionalStr(formData, "customerId"),
+    sourceDraftId: optionalStr(formData, "sourceDraftId"),
+    sourceDraftKind:
+      optionalStr(formData, "sourceDraftKind") === "event" ? "event" : "invitation",
+  });
+}
+
 export async function submitEventDetails(formData: FormData) {
   const kind = wizardKindFromForm(formData);
   const eventName = String(formData.get("eventName") ?? "").trim();
@@ -66,6 +142,9 @@ export async function submitEventDetails(formData: FormData) {
   const coverImage = optionalStr(formData, "coverImage");
   const customerId = optionalStr(formData, "customerId");
   const eventId = optionalStr(formData, "eventId");
+  const fromCustomer = String(formData.get("fromCustomer") ?? "") === "1";
+  const customerExtra = customerWizardParamsFromForm(formData);
+  const nextStep = fromCustomer && kind === "live" ? liveWizardStepAfterDetails(true) : "2";
   const eventSlug = optionalStr(formData, "eventSlug")
     ?.toLowerCase()
     .replace(/[^a-z0-9-]+/g, "-")
@@ -112,18 +191,24 @@ export async function submitEventDetails(formData: FormData) {
 
     if (eventId) {
       await updateEventAction(eventId, payload);
-      wizardRedirect(kind, { step: "2", eventId });
+      wizardRedirect(kind, { step: nextStep, eventId, ...customerExtra });
     }
 
     const created = await createEventAction(payload);
-    wizardRedirect(kind, { step: "2", eventId: created.id });
+    wizardRedirect(kind, { step: nextStep, eventId: created.id, ...customerExtra });
   } catch (err) {
     rethrowRedirect(err);
     const message = err instanceof Error ? err.message : "";
-    if (/unauthorized|session|token/i.test(message)) {
+    if (isAuthSessionError(message)) {
       redirect("/login?error=session");
     }
-    wizardRedirect(kind, { step: "1", eventId, error: "1" });
+    wizardRedirect(kind, {
+      step: "1",
+      eventId,
+      error: "1",
+      msg: message.slice(0, 240),
+      ...customerExtra,
+    });
   }
 }
 
@@ -227,10 +312,19 @@ export async function submitThemeContentStep(formData: FormData) {
     }
   } catch (err) {
     rethrowRedirect(err);
-    wizardRedirect(kind, { step: kind === "live" ? "3" : "3", eventId, error: "1" });
+    wizardRedirect(kind, {
+      step: kind === "live" ? "3" : "3",
+      eventId,
+      error: "1",
+      ...customerWizardParamsFromForm(formData),
+    });
   }
 
-  wizardRedirect(kind, { step: kind === "live" ? "4" : "4", eventId });
+  wizardRedirect(kind, {
+    step: kind === "live" ? "4" : "4",
+    eventId,
+    ...customerWizardParamsFromForm(formData),
+  });
 }
 
 export async function submitEventPageStep(formData: FormData) {

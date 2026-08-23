@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { apiFetch, formatINR, mapEventStatus, fmtDate } from "./api";
 import type { Customer, EventRecord, StatusTone } from "./data";
 import { TONES, statusTone } from "./data";
@@ -129,12 +130,26 @@ export async function discardDraftEventAction(eventId: string) {
 
 export async function fetchCustomers(): Promise<Customer[]> {
   try {
-    const { data } = await apiFetch<BackendCustomer[]>("/customers");
+    const { data } = await apiFetch<
+      Array<{
+        id: string;
+        name: string;
+        email?: string | null;
+        status: string;
+        createdAt?: string;
+        eventsCount?: number;
+        contentStatus?: Customer["contentStatus"];
+        contentFillUrl?: string | null;
+        draftInvitationId?: string | null;
+        draftInvitationName?: string | null;
+        contentFilledAt?: string | null;
+      }>
+    >("/customers");
     return (data ?? []).map((c, i) => ({
       id: i + 1,
       name: c.name,
       email: c.email ?? "",
-      events: 0,
+      events: c.eventsCount ?? 0,
       spend: "₹0",
       status: c.status === "ACTIVE" ? "Active" : "Inactive",
       joined: fmtDate(c.createdAt),
@@ -142,27 +157,82 @@ export async function fetchCustomers(): Promise<Customer[]> {
       paymentsList: [],
       activity: [],
       _id: c.id,
+      contentStatus: c.contentStatus ?? "NONE",
+      contentFillUrl: c.contentFillUrl ?? null,
+      draftInvitationId: c.draftInvitationId ?? null,
+      draftInvitationName: c.draftInvitationName ?? null,
+      contentFilledAt: c.contentFilledAt ?? null,
     })) as Customer[];
   } catch {
     return [];
   }
 }
 
-export async function fetchCustomer(id: string): Promise<(Customer & { _id?: string }) | null> {
+export async function fetchCustomer(id: string): Promise<(Customer & { _id?: string; draftInvitation?: Record<string, unknown> | null }) | null> {
   try {
-    const { data } = await apiFetch<BackendCustomer>(`/customers/${id}`);
+    const { data } = await apiFetch<{
+      id: string;
+      name: string;
+      email?: string | null;
+      status: string;
+      createdAt?: string;
+      draftInvitation?: {
+        id: string;
+        invitationName?: string;
+        contentFillUrl?: string | null;
+        contentFilledAt?: string | null;
+        contentFilledBy?: string | null;
+        themeId?: string | null;
+        themeConfig?: { themeId?: string } | null;
+        brideName?: string | null;
+        groomName?: string | null;
+        eventDate?: string | null;
+        eventPlace?: string | null;
+      } | null;
+      eventsCount?: number;
+      events?: {
+        id: string;
+        eventName?: string;
+        eventDate?: string | null;
+        status?: string | null;
+        eventSlug?: string | null;
+      }[];
+    }>(`/customers/${id}`);
+    const draft = data.draftInvitation;
+    const eventsList = (data.events ?? []).map((event) => {
+      const date = event.eventDate ? new Date(event.eventDate) : null;
+      return {
+        _id: event.id,
+        name: event.eventName ?? "Live event",
+        date: date
+          ? date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          : "—",
+      };
+    });
     return {
       id: 0,
       name: data.name,
       email: data.email ?? "",
-      events: 0,
+      events: data.eventsCount ?? eventsList.length,
       spend: "₹0",
       status: data.status === "ACTIVE" ? "Active" : "Inactive",
       joined: fmtDate(data.createdAt),
-      eventsList: [],
+      eventsList,
       paymentsList: [],
       activity: [],
       _id: data.id,
+      contentStatus: draft?.contentFilledAt
+        ? "SUBMITTED"
+        : draft?.themeId
+          ? "AWAITING_CONTENT"
+          : draft
+            ? "THEME_PENDING"
+            : "NONE",
+      contentFillUrl: draft?.contentFillUrl ?? null,
+      draftInvitationId: draft?.id ?? null,
+      draftInvitationName: draft?.invitationName ?? null,
+      contentFilledAt: draft?.contentFilledAt ?? null,
+      draftInvitation: draft ?? null,
     };
   } catch {
     return null;
@@ -448,6 +518,40 @@ export async function createInvitationPreviewToken(invitationId: string) {
   return data;
 }
 
+export async function ensureContentFillTokenAction(
+  recordId: string,
+  recordKind: CustomerContentRecordKind
+): Promise<{ contentFillToken?: string; contentFillUrl?: string } | null> {
+  async function requestToken(kind: CustomerContentRecordKind) {
+    const path =
+      kind === "event"
+        ? `/events/${recordId}/content-fill-token`
+        : `/invitations/${recordId}/content-fill-token`;
+    const { data } = await apiFetch<{ contentFillToken: string; contentFillUrl: string }>(path, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    return data;
+  }
+
+  try {
+    return await requestToken(recordKind);
+  } catch (err) {
+    if (apiRouteUnavailable(err, "content-fill-token")) return null;
+    const msg = err instanceof Error ? err.message.toLowerCase() : "";
+    if (/not found/.test(msg)) {
+      const altKind: CustomerContentRecordKind = recordKind === "event" ? "invitation" : "event";
+      try {
+        return await requestToken(altKind);
+      } catch (err2) {
+        if (apiRouteUnavailable(err2, "content-fill-token")) return null;
+        throw err2;
+      }
+    }
+    throw err;
+  }
+}
+
 export async function fetchWallet() {
   try {
     const [{ data: wallet }, { data: tx }] = await Promise.all([
@@ -718,4 +822,105 @@ export async function createCustomerAction(payload: Record<string, unknown>) {
     body: JSON.stringify(payload),
   });
   return data;
+}
+
+export type CustomerContentRecordKind = "invitation" | "event";
+
+export type CustomerDraftSetupResult = {
+  customer: { id: string; _id?: string; name: string; email?: string };
+  invitation: { id: string; _id?: string; invitationName: string; contentFillToken?: string };
+  recordKind?: CustomerContentRecordKind;
+  contentFillToken?: string;
+  contentFillUrl?: string;
+};
+
+function apiRouteUnavailable(err: unknown, pathHint?: string): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  if (/no route:/.test(msg)) return true;
+  if (pathHint && /api 404:/.test(msg) && msg.includes(pathHint.toLowerCase())) {
+    return true;
+  }
+  return false;
+}
+
+async function setupCustomerDraftLegacy(payload: {
+  name: string;
+  email: string;
+  phone?: string;
+  invitationName: string;
+  themeId?: string;
+}): Promise<CustomerDraftSetupResult> {
+  const password = crypto.randomBytes(16).toString("base64url");
+  const customerRaw = (await createCustomerAction({
+    name: payload.name,
+    email: payload.email,
+    phone: payload.phone,
+    password,
+  })) as { id?: string; _id?: string; name?: string; email?: string };
+
+  const customerId = customerRaw.id ?? customerRaw._id;
+  if (!customerId) throw new Error("Customer created but no id returned");
+
+  let recordKind: CustomerContentRecordKind = "invitation";
+  let recordId: string;
+
+  try {
+    const invitation = await createInvitationAction({
+      customerId,
+      invitationName: payload.invitationName,
+    });
+    recordId = invitation.id;
+    if (payload.themeId) {
+      await setInvitationThemeAction(recordId, { themeId: payload.themeId });
+    }
+  } catch (err) {
+    if (!apiRouteUnavailable(err, "/invitations")) throw err;
+    const event = await createEventAction({
+      customerId,
+      eventName: payload.invitationName,
+    });
+    recordKind = "event";
+    recordId = event.id;
+    if (payload.themeId) {
+      await setEventThemeAction(recordId, { themeId: payload.themeId });
+    }
+  }
+
+  const fillLink = await ensureContentFillTokenAction(recordId, recordKind);
+
+  return {
+    customer: {
+      id: customerId,
+      name: payload.name,
+      email: payload.email,
+    },
+    invitation: {
+      id: recordId,
+      invitationName: payload.invitationName,
+      contentFillToken: fillLink?.contentFillToken,
+    },
+    recordKind,
+    contentFillToken: fillLink?.contentFillToken,
+    contentFillUrl: fillLink?.contentFillUrl,
+  };
+}
+
+export async function setupCustomerDraftAction(payload: {
+  name: string;
+  email: string;
+  phone?: string;
+  invitationName: string;
+  themeId?: string;
+}): Promise<CustomerDraftSetupResult> {
+  try {
+    const { data } = await apiFetch<CustomerDraftSetupResult>("/customers/setup-draft", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return data;
+  } catch (err) {
+    if (!apiRouteUnavailable(err, "setup-draft")) throw err;
+    return setupCustomerDraftLegacy(payload);
+  }
 }

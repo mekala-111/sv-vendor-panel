@@ -39,14 +39,25 @@ export function ThemeContentEditor({
 }) {
   const fieldKeys = useMemo(() => fields.map((f) => `${f.key}:${f.type}`).join("|"), [fields]);
   const rawToggleKey = `${String(raw.showSubEvents)}|${String(raw.showInvitationCard)}`;
+  const rawContentKey = useMemo(
+    () =>
+      fields
+        .map((field) => {
+          const value = raw[field.key];
+          if (Array.isArray(value)) return `${field.key}:${value.length}:${JSON.stringify(value).slice(0, 120)}`;
+          return `${field.key}:${String(value ?? "")}`;
+        })
+        .join("|"),
+    [fields, raw]
+  );
 
   // Single source of truth for toggles + preview (hidden inputs read this same state).
   const [content, setContent] = useState(() => initThemeContent(raw, fields));
 
   useEffect(() => {
     setContent(initThemeContent(raw, fields));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when server toggles / fields change
-  }, [fieldKeys, rawToggleKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when server fields / values change
+  }, [fieldKeys, rawToggleKey, rawContentKey]);
 
   const previewPayload = useMemo(
     () =>
