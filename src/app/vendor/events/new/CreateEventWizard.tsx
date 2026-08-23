@@ -70,7 +70,6 @@ export async function CreateEventWizard({
     redirect(wizardStepUrl(kind, 3, eventId, customerExtra));
   }
 
-<<<<<<< Updated upstream
   if (step > 1 && !eventId) {
     redirect(wizardStepUrl(kind, 1, null, customerExtra));
   }
@@ -87,10 +86,6 @@ export async function CreateEventWizard({
         : Promise.resolve(null);
 
   let recordPromise: ReturnType<typeof fetchEvent> | ReturnType<typeof fetchInvitation> | Promise<null> =
-=======
-  const [themes, record, profile, youtube] = await Promise.all([
-    fetchThemes(),
->>>>>>> Stashed changes
     eventId
       ? kind === "invitation"
         ? fetchInvitation(eventId)
@@ -111,15 +106,14 @@ export async function CreateEventWizard({
     );
   }
 
-  const [themes, record, profile, sourceDraft] = await Promise.all([
+  const [themes, record, profile, sourceDraft, youtube] = await Promise.all([
     fetchThemes(),
     recordPromise,
     fetchVendorProfile(),
-<<<<<<< Updated upstream
     sourceDraftPromise,
-=======
-    kind === "live" ? fetchYoutube() : Promise.resolve({ channels: [] as { id: string; channelName?: string | null }[] }),
->>>>>>> Stashed changes
+    kind === "live"
+      ? fetchYoutube()
+      : Promise.resolve({ channels: [] as { id: string; channelName?: string | null }[] }),
   ]);
 
   if (step > 1 && eventId && !record) {
