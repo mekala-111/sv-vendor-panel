@@ -64,11 +64,7 @@ export async function shareEventWithImage({
 }) {
   const message = text || url;
   const openWhatsApp = () => {
-    window.open(
-      `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`,
-      "_blank",
-      "noopener,noreferrer"
-    );
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
   };
 
   const absoluteImage = absoluteAssetUrl(imageUrl);
