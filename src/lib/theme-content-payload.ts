@@ -110,3 +110,29 @@ export function buildThemeContentPayload(
 
   return payload;
 }
+
+const RESERVED_THEME_KEYS = new Set<string>([
+  ...EVENT_CONTENT_KEYS,
+  "galleryImages",
+  "subEvents",
+  "showSubEvents",
+  "showInvitationCard",
+  "eventId",
+  "invitationId",
+  "themeId",
+  "wizardKind",
+  "kind",
+  "eventSlug",
+  "location",
+  "youtubeVideoId",
+]);
+
+export function extraThemeFields(formData: FormData): Record<string, unknown> {
+  const extras: Record<string, unknown> = {};
+  for (const [key, value] of formData.entries()) {
+    if (RESERVED_THEME_KEYS.has(key)) continue;
+    if (typeof value !== "string") continue;
+    extras[key] = value.trim();
+  }
+  return extras;
+}

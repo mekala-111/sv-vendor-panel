@@ -234,6 +234,12 @@ export function buildEventThemePreviewPayload(
     }
   }
 
+  for (const [key, val] of Object.entries(content)) {
+    if (typeof val !== "string" || !val.trim()) continue;
+    if (event[key] != null && String(event[key]).length > 0) continue;
+    event[key] = val.trim();
+  }
+
   if (opts?.eventName) event.eventName = opts.eventName;
   if (opts?.pageTitle || str("pageTitle")) {
     event.pageTitle = str("pageTitle") || opts?.pageTitle || opts?.eventName || event.pageTitle;

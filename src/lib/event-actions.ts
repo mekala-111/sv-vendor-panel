@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { buildThemeContentPayload } from "./theme-content-payload";
+import { buildThemeContentPayload, extraThemeFields } from "./theme-content-payload";
 import { type EventWizardKind, parseWizardKind, wizardBasePath } from "./event-wizard";
 import {
   createEventAction,
@@ -159,9 +159,14 @@ export async function submitThemeContentStep(formData: FormData) {
 
   try {
     const payload = buildThemeContentPayload(formData, kind);
+    const extras = extraThemeFields(formData);
     if (kind === "invitation") {
       await updateInvitationAction(eventId, payload);
-      if (payload.showSubEvents !== undefined || payload.showInvitationCard !== undefined) {
+      if (
+        payload.showSubEvents !== undefined ||
+        payload.showInvitationCard !== undefined ||
+        Object.keys(extras).length
+      ) {
         const invitation = await fetchInvitation(eventId);
         const raw = (invitation?.raw ?? {}) as Record<string, unknown>;
         const themeConfig =
@@ -182,13 +187,18 @@ export async function submitThemeContentStep(formData: FormData) {
               ...(payload.showInvitationCard !== undefined
                 ? { showInvitationCard: payload.showInvitationCard }
                 : {}),
+              ...extras,
             },
           });
         }
       }
     } else {
       await updateEventAction(eventId, payload);
-      if (payload.showSubEvents !== undefined || payload.showInvitationCard !== undefined) {
+      if (
+        payload.showSubEvents !== undefined ||
+        payload.showInvitationCard !== undefined ||
+        Object.keys(extras).length
+      ) {
         const event = await fetchEvent(eventId);
         const raw = (event?.raw ?? {}) as Record<string, unknown>;
         const themeConfig =
@@ -209,6 +219,7 @@ export async function submitThemeContentStep(formData: FormData) {
               ...(payload.showInvitationCard !== undefined
                 ? { showInvitationCard: payload.showInvitationCard }
                 : {}),
+              ...extras,
             },
           });
         }

@@ -7,7 +7,7 @@ import {
   setInvitationThemeAction,
   updateInvitationAction,
 } from "@/lib/server-data";
-import { buildThemeContentPayload } from "@/lib/theme-content-payload";
+import { buildThemeContentPayload, extraThemeFields } from "@/lib/theme-content-payload";
 
 function rethrowRedirect(err: unknown) {
   if (
@@ -23,9 +23,17 @@ function rethrowRedirect(err: unknown) {
 
 async function persistInvitationSectionToggles(
   invitationId: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  extras: Record<string, unknown> = {}
 ) {
-  if (payload.showSubEvents === undefined && payload.showInvitationCard === undefined) {
+  const patch = {
+    ...(payload.showSubEvents !== undefined ? { showSubEvents: payload.showSubEvents } : {}),
+    ...(payload.showInvitationCard !== undefined
+      ? { showInvitationCard: payload.showInvitationCard }
+      : {}),
+    ...extras,
+  };
+  if (!Object.keys(patch).length) {
     return;
   }
   const invitation = await fetchInvitation(invitationId);
@@ -46,10 +54,7 @@ async function persistInvitationSectionToggles(
     themeId,
     customConfig: {
       ...prevCustom,
-      ...(payload.showSubEvents !== undefined ? { showSubEvents: payload.showSubEvents } : {}),
-      ...(payload.showInvitationCard !== undefined
-        ? { showInvitationCard: payload.showInvitationCard }
-        : {}),
+      ...patch,
     },
   });
 }
@@ -120,7 +125,7 @@ export async function saveInvitationThemeContentAction(formData: FormData) {
   try {
     const payload = buildThemeContentPayload(formData);
     await updateInvitationAction(invitationId, payload);
-    await persistInvitationSectionToggles(invitationId, payload);
+    await persistInvitationSectionToggles(invitationId, payload, extraThemeFields(formData));
   } catch (err) {
     rethrowRedirect(err);
     redirect(`/vendor/invitations/${invitationId}?tab=Theme%20Content&error=1`);

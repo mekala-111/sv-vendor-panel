@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { fetchEvent, setEventThemeAction, updateEventAction } from "@/lib/server-data";
-import { buildThemeContentPayload } from "@/lib/theme-content-payload";
+import { buildThemeContentPayload, extraThemeFields } from "@/lib/theme-content-payload";
 
 function rethrowRedirect(err: unknown) {
   if (
@@ -19,9 +19,17 @@ function rethrowRedirect(err: unknown) {
 
 async function persistSectionToggles(
   eventId: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  extras: Record<string, unknown> = {}
 ) {
-  if (payload.showSubEvents === undefined && payload.showInvitationCard === undefined) {
+  const patch = {
+    ...(payload.showSubEvents !== undefined ? { showSubEvents: payload.showSubEvents } : {}),
+    ...(payload.showInvitationCard !== undefined
+      ? { showInvitationCard: payload.showInvitationCard }
+      : {}),
+    ...extras,
+  };
+  if (!Object.keys(patch).length) {
     return;
   }
   const event = await fetchEvent(eventId);
@@ -42,10 +50,7 @@ async function persistSectionToggles(
     themeId,
     customConfig: {
       ...prevCustom,
-      ...(payload.showSubEvents !== undefined ? { showSubEvents: payload.showSubEvents } : {}),
-      ...(payload.showInvitationCard !== undefined
-        ? { showInvitationCard: payload.showInvitationCard }
-        : {}),
+      ...patch,
     },
   });
 }
@@ -116,9 +121,7 @@ export async function saveThemeContentAction(formData: FormData) {
   try {
     const payload = buildThemeContentPayload(formData, "live");
     await updateEventAction(eventId, payload);
-    // Also store toggles on themeConfig.customConfig — production Event schema may
-    // still strip showSubEvents / showInvitationCard as unknown paths.
-    await persistSectionToggles(eventId, payload);
+    await persistSectionToggles(eventId, payload, extraThemeFields(formData));
   } catch (err) {
     rethrowRedirect(err);
     redirect(`/vendor/events/${eventId}?tab=Theme%20Content&error=1`);
