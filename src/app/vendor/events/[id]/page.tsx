@@ -322,6 +322,7 @@ export default async function EventDetailPage(props: PageProps<"/vendor/events/[
                 title="Theme content"
                 submitLabel="Save content"
                 description={`Page content and YouTube live details for ${appliedTheme?.name ?? "your theme"}.`}
+                kind="live"
                 banner={tabBanner(saved, error)}
               />
             )}

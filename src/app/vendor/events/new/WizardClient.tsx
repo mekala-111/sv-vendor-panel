@@ -7,6 +7,7 @@ import {
   isLoopbackPublicBase,
   resolveScannablePublicEventUrl,
 } from "@/lib/public-event-url";
+import { ThemePreviewImage } from "@/components/ThemePreviewImage";
 import { normalizeTimeForInput } from "@/lib/time-input";
 import styles from "./wizard.module.css";
 
@@ -533,5 +534,89 @@ export function EventPageQr({
         ) : null}
       </div>
     </div>
+  );
+}
+
+const THEME_MEMORY_KEY = "sv-last-theme-id";
+
+export function RememberThemeGrid({
+  name = "themeId",
+  selectedId,
+  themes,
+}: {
+  name?: string;
+  selectedId?: string | null;
+  themes: {
+    id: string;
+    name: string;
+    previewImage?: string | null;
+    stripe1?: string;
+    stripe2?: string;
+    primary?: string;
+  }[];
+}) {
+  const [picked, setPicked] = useState(selectedId ?? "");
+  const [remember, setRemember] = useState(false);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(THEME_MEMORY_KEY);
+    const rememberSaved = window.localStorage.getItem(`${THEME_MEMORY_KEY}-on`) === "1";
+    setRemember(rememberSaved);
+    if (!selectedId && saved && themes.some((t) => t.id === saved)) {
+      setPicked(saved);
+    }
+  }, [selectedId, themes]);
+
+  return (
+    <>
+      <div className={styles.themeGrid}>
+        {themes.map((t) => {
+          const checked = picked === t.id;
+          return (
+            <label
+              key={t.id}
+              className={`${styles.themeCard} ${checked ? styles.themeCardActive : ""}`}
+            >
+              <input
+                type="radio"
+                name={name}
+                value={t.id}
+                checked={checked}
+                onChange={() => {
+                  setPicked(t.id);
+                  if (remember) window.localStorage.setItem(THEME_MEMORY_KEY, t.id);
+                }}
+                style={{ display: "none" }}
+              />
+              <ThemePreviewImage
+                previewUrl={t.previewImage}
+                name={t.name}
+                className={styles.themeStripe}
+                fallbackColors={{
+                  stripe1: t.stripe1,
+                  stripe2: t.stripe2,
+                  primary: t.primary,
+                }}
+              />
+              <div className={styles.themeName}>{t.name}</div>
+            </label>
+          );
+        })}
+      </div>
+      <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, fontSize: 13 }}>
+        <input
+          type="checkbox"
+          checked={remember}
+          onChange={(e) => {
+            const on = e.target.checked;
+            setRemember(on);
+            window.localStorage.setItem(`${THEME_MEMORY_KEY}-on`, on ? "1" : "0");
+            if (on && picked) window.localStorage.setItem(THEME_MEMORY_KEY, picked);
+            if (!on) window.localStorage.removeItem(THEME_MEMORY_KEY);
+          }}
+        />
+        Remember my choice
+      </label>
+    </>
   );
 }

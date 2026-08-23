@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import ui from "@/components/ui.module.css";
 import { ThemePreviewFrame } from "@/components/ThemePreviewFrame";
 import { ThemeContentFields, initThemeContent } from "@/app/vendor/events/ThemeContentFields";
+import type { YoutubeChannelOption } from "@/app/vendor/events/ThemeContentFields";
 import type { ThemeFieldDef } from "@/lib/theme-config";
 import {
   buildEventThemePreviewPayload,
@@ -24,6 +25,8 @@ export function ThemeContentEditor({
   submitLabel = "Save & continue",
   description,
   banner,
+  kind = "invitation",
+  youtubeChannels = [],
 }: {
   eventId: string;
   fields: ThemeFieldDef[];
@@ -36,6 +39,8 @@ export function ThemeContentEditor({
   description?: string;
   submitLabel?: string;
   banner?: React.ReactNode;
+  kind?: "live" | "invitation";
+  youtubeChannels?: YoutubeChannelOption[];
 }) {
   const fieldKeys = useMemo(() => fields.map((f) => `${f.key}:${f.type}`).join("|"), [fields]);
   const rawToggleKey = `${String(raw.showSubEvents)}|${String(raw.showInvitationCard)}`;
@@ -92,6 +97,8 @@ export function ThemeContentEditor({
               content={content}
               onContentChange={setContent}
               raw={raw}
+              kind={kind}
+              youtubeChannels={youtubeChannels}
             />
           </div>
           <div className={styles.contentFormFooter}>

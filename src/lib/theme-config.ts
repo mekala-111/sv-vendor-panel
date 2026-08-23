@@ -57,7 +57,9 @@ export const LIVE_EVENT_FIELDS: ThemeFieldDef[] = [
   { key: "eventPlace", label: "Venue", type: "text", placeholder: "City or venue" },
   { key: "coverImage", label: "Cover image", type: "image", hint: "Any size · JPEG/PNG/WebP" },
   { key: "scrollMessage", label: "Ticker message", type: "textarea", placeholder: "Welcome message" },
-  { key: "galleryImages", label: "Gallery images", type: "gallery", maxItems: 12 },
+  { key: "galleryImages", label: "Gallery images", type: "gallery", maxItems: 10 },
+  { key: "logoImage", label: "Logo", type: "image", hint: "Max 500KB · JPEG/PNG" },
+  { key: "customImage", label: "Custom image", type: "image", hint: "Height 800px · under 500KB" },
 ];
 
 /** Appended to theme content for live events (wizard + event detail). */
@@ -66,14 +68,14 @@ export const LIVE_YOUTUBE_FIELDS: ThemeFieldDef[] = [
     key: "youtubeLiveUrl",
     label: "Live stream URL",
     type: "text",
-    placeholder: "https://youtube.com/live/…",
+    placeholder: "https://youtube.com/live/_eZppUQh9kU",
   },
-  { key: "youtubeLiveKey", label: "Stream key", type: "streamKey" },
+  { key: "youtubeLiveKey", label: "YouTube live key", type: "streamKey", placeholder: "rt56-t6dt-1kga-kc8a-bkf7" },
   {
     key: "teaserUrl",
     label: "Teaser video URL",
     type: "text",
-    placeholder: "https://youtube.com/watch?v=…",
+    placeholder: "https://youtu.be/LsVQ3F3LCcE",
   },
 ];
 

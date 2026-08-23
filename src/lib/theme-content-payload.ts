@@ -66,6 +66,12 @@ const EVENT_CONTENT_KEYS = [
   "remarks2",
   "logoImage",
   "customImage",
+  "whatsappImage",
+  "whatsappNumber",
+  "fontFamily",
+  "fontColor",
+  "accessPin",
+  "youtubeChannelId",
   "youtubeLiveUrl",
   "youtubeLiveKey",
   "teaserUrl",
@@ -92,6 +98,12 @@ export function buildThemeContentPayload(
   if (formData.has("showInvitationCard")) {
     payload.showInvitationCard = String(formData.get("showInvitationCard")).toLowerCase() === "true";
   }
+  if (formData.has("showWatchLive")) {
+    payload.showWatchLive = String(formData.get("showWatchLive")).toLowerCase() === "true";
+  }
+  if (formData.has("showSocialShare")) {
+    payload.showSocialShare = String(formData.get("showSocialShare")).toLowerCase() === "true";
+  }
 
   if (payload.eventPlace) payload.location = payload.eventPlace;
 
@@ -117,6 +129,8 @@ const RESERVED_THEME_KEYS = new Set<string>([
   "subEvents",
   "showSubEvents",
   "showInvitationCard",
+  "showWatchLive",
+  "showSocialShare",
   "eventId",
   "invitationId",
   "themeId",

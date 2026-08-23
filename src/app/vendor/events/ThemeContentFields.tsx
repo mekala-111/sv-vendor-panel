@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import ui from "@/components/ui.module.css";
+import { eventFontOptions } from "@/lib/data";
 import type { ThemeFieldDef } from "@/lib/theme-config";
 import { normalizeTimeForInput } from "@/lib/time-input";
 import {
@@ -69,20 +70,42 @@ export function initThemeContent(raw: Record<string, unknown>, fields: ThemeFiel
       if (v) content[field.key] = v;
     }
   }
+  content.showWatchLive = coerceBool(raw.showWatchLive, true);
+  content.showSocialShare = coerceBool(raw.showSocialShare, true);
+  for (const key of [
+    "whatsappImage",
+    "whatsappNumber",
+    "fontFamily",
+    "fontColor",
+    "accessPin",
+    "youtubeChannelId",
+    "logoImage",
+    "customImage",
+  ]) {
+    if (content[key]) continue;
+    const v = fieldDefaultValue(key, raw);
+    if (v) content[key] = v;
+  }
   return content;
 }
+
+export type YoutubeChannelOption = { id: string; channelName?: string | null };
 
 export function ThemeContentFields({
   fields,
   content,
   onContentChange,
   raw = {},
+  kind = "invitation",
+  youtubeChannels = [],
 }: {
   fields: ThemeFieldDef[];
   content: Record<string, unknown>;
   onContentChange: (content: Record<string, unknown>) => void;
   /** Optional leftovers for stream-key defaults when not in content yet. */
   raw?: Record<string, unknown>;
+  kind?: "live" | "invitation";
+  youtubeChannels?: YoutubeChannelOption[];
 }) {
   const patch = useCallback(
     (key: string, value: unknown) => {
@@ -95,9 +118,18 @@ export function ThemeContentFields({
 
   if (!fieldList.length) {
     return (
-      <p style={{ fontSize: 13, color: "var(--muted-strong)" }}>
-        No content fields for this theme. Go back and select a theme first.
-      </p>
+      <div className={styles.formGrid}>
+        <p style={{ fontSize: 13, color: "var(--muted-strong)" }}>
+          No content fields for this theme. Go back and select a theme first.
+        </p>
+        <EventPageOptions
+          kind={kind}
+          content={content}
+          onPatch={patch}
+          fieldKeys={new Set()}
+          youtubeChannels={youtubeChannels}
+        />
+      </div>
     );
   }
 
@@ -279,6 +311,182 @@ export function ThemeContentFields({
           </div>
         );
       })}
+      <EventPageOptions
+        kind={kind}
+        content={content}
+        onPatch={patch}
+        fieldKeys={new Set(fieldList.map((f) => f.key))}
+        youtubeChannels={youtubeChannels}
+      />
     </div>
+  );
+}
+
+function EventPageOptions({
+  kind,
+  content,
+  onPatch,
+  fieldKeys,
+  youtubeChannels,
+}: {
+  kind: "live" | "invitation";
+  content: Record<string, unknown>;
+  onPatch: (key: string, value: unknown) => void;
+  fieldKeys: Set<string>;
+  youtubeChannels: YoutubeChannelOption[];
+}) {
+  const showWatchLive = content.showWatchLive !== false;
+  const showSocialShare = content.showSocialShare !== false;
+  const fontColor = String(content.fontColor ?? "#FFCC00");
+
+  return (
+    <>
+      {kind === "live" && youtubeChannels.length > 0 ? (
+        <div>
+          <label className={ui.label} htmlFor="youtubeChannelId">
+            YouTube channel
+          </label>
+          <select
+            id="youtubeChannelId"
+            name="youtubeChannelId"
+            className={ui.input}
+            value={String(content.youtubeChannelId ?? "")}
+            onChange={(e) => onPatch("youtubeChannelId", e.target.value)}
+          >
+            <option value="">-- Select --</option>
+            {youtubeChannels.map((ch) => (
+              <option key={ch.id} value={ch.id}>
+                {ch.channelName || ch.id}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
+      {!fieldKeys.has("logoImage") ? (
+        <ImageFileField
+          name="logoImage"
+          label="Logo"
+          hint="Max 500KB"
+          defaultValue={String(content.logoImage ?? "")}
+          onValueChange={(value) => onPatch("logoImage", value)}
+        />
+      ) : null}
+      {!fieldKeys.has("customImage") ? (
+        <ImageFileField
+          name="customImage"
+          label="Custom image"
+          hint="Height 800px · under 500KB"
+          defaultValue={String(content.customImage ?? "")}
+          onValueChange={(value) => onPatch("customImage", value)}
+        />
+      ) : null}
+      <ImageFileField
+        name="whatsappImage"
+        label="WhatsApp image (500×500)"
+        hint="Max 500KB"
+        defaultValue={String(content.whatsappImage ?? "")}
+        onValueChange={(value) => onPatch("whatsappImage", value)}
+      />
+
+      <label className={styles.subEventsToggleRow} style={{ alignItems: "center" }}>
+        <input type="hidden" name="showWatchLive" value={showWatchLive ? "true" : "false"} />
+        <span>
+          <span className={ui.label}>Add Watch Live button</span>
+        </span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={showWatchLive}
+          className={`${styles.toggleSwitch} ${showWatchLive ? styles.toggleSwitchOn : ""}`}
+          onClick={() => onPatch("showWatchLive", !showWatchLive)}
+        >
+          <span className={styles.toggleKnob} />
+        </button>
+      </label>
+
+      <label className={styles.subEventsToggleRow} style={{ alignItems: "center" }}>
+        <input type="hidden" name="showSocialShare" value={showSocialShare ? "true" : "false"} />
+        <span>
+          <span className={ui.label}>Add social media share button</span>
+        </span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={showSocialShare}
+          className={`${styles.toggleSwitch} ${showSocialShare ? styles.toggleSwitchOn : ""}`}
+          onClick={() => onPatch("showSocialShare", !showSocialShare)}
+        >
+          <span className={styles.toggleKnob} />
+        </button>
+      </label>
+
+      <div>
+        <label className={ui.label} htmlFor="whatsappNumber">
+          WhatsApp support number
+        </label>
+        <input
+          id="whatsappNumber"
+          name="whatsappNumber"
+          className={ui.input}
+          inputMode="numeric"
+          maxLength={10}
+          placeholder="10-digit number"
+          value={String(content.whatsappNumber ?? "")}
+          onChange={(e) => onPatch("whatsappNumber", e.target.value.replace(/\D/g, "").slice(0, 10))}
+        />
+      </div>
+
+      <div>
+        <label className={ui.label} htmlFor="fontFamily">
+          Font style
+        </label>
+        <select
+          id="fontFamily"
+          name="fontFamily"
+          className={ui.input}
+          value={String(content.fontFamily ?? "")}
+          onChange={(e) => onPatch("fontFamily", e.target.value)}
+        >
+          <option value="">Select a font</option>
+          {eventFontOptions.map((font) => (
+            <option key={font} value={font} style={{ fontFamily: font }}>
+              {font}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className={ui.label} htmlFor="fontColor">
+          Font color
+        </label>
+        <input
+          id="fontColor"
+          name="fontColor"
+          type="color"
+          className={ui.input}
+          value={/^#[0-9A-Fa-f]{6}$/.test(fontColor) ? fontColor : "#FFCC00"}
+          onChange={(e) => onPatch("fontColor", e.target.value)}
+          style={{ height: 40, padding: 4, maxWidth: 80 }}
+        />
+      </div>
+
+      <div>
+        <label className={ui.label} htmlFor="accessPin">
+          PIN
+        </label>
+        <input
+          id="accessPin"
+          name="accessPin"
+          className={ui.input}
+          maxLength={8}
+          placeholder="1234"
+          value={String(content.accessPin ?? "")}
+          onChange={(e) => onPatch("accessPin", e.target.value)}
+          style={{ maxWidth: 120 }}
+        />
+      </div>
+    </>
   );
 }

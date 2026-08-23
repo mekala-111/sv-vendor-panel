@@ -25,8 +25,7 @@ import {
   submitThemeContentStep,
   submitThemeStep,
 } from "@/lib/event-actions";
-import { fetchEvent, fetchInvitation, fetchThemes, fetchVendorProfile } from "@/lib/server-data";
-import { ThemePreviewImage } from "@/components/ThemePreviewImage";
+import { fetchEvent, fetchInvitation, fetchThemes, fetchVendorProfile, fetchYoutube } from "@/lib/server-data";
 import { PreviewEventButton } from "@/components/PreviewEventButton";
 import { resolveWizardThemeFields } from "@/lib/theme-config";
 import { withResolvedThemeSectionToggles } from "@/lib/theme-section-toggles";
@@ -43,6 +42,7 @@ import {
   CopyLinkButton,
   DomainSlugInput,
   EventPageQr,
+  RememberThemeGrid,
 } from "./WizardClient";
 import { PaymentStepClient } from "./PaymentStepClient";
 import { WizardStepper } from "./WizardStepper";
@@ -70,6 +70,7 @@ export async function CreateEventWizard({
     redirect(wizardStepUrl(kind, 3, eventId, customerExtra));
   }
 
+<<<<<<< Updated upstream
   if (step > 1 && !eventId) {
     redirect(wizardStepUrl(kind, 1, null, customerExtra));
   }
@@ -86,6 +87,10 @@ export async function CreateEventWizard({
         : Promise.resolve(null);
 
   let recordPromise: ReturnType<typeof fetchEvent> | ReturnType<typeof fetchInvitation> | Promise<null> =
+=======
+  const [themes, record, profile, youtube] = await Promise.all([
+    fetchThemes(),
+>>>>>>> Stashed changes
     eventId
       ? kind === "invitation"
         ? fetchInvitation(eventId)
@@ -110,7 +115,11 @@ export async function CreateEventWizard({
     fetchThemes(),
     recordPromise,
     fetchVendorProfile(),
+<<<<<<< Updated upstream
     sourceDraftPromise,
+=======
+    kind === "live" ? fetchYoutube() : Promise.resolve({ channels: [] as { id: string; channelName?: string | null }[] }),
+>>>>>>> Stashed changes
   ]);
 
   if (step > 1 && eventId && !record) {
@@ -317,7 +326,7 @@ export async function CreateEventWizard({
                 <>
                   <div>
                     <label className={ui.label} htmlFor="liveTiming">
-                      Live timing
+                      Live event timings
                     </label>
                     <input
                       id="liveTiming"
@@ -326,6 +335,15 @@ export async function CreateEventWizard({
                       className={ui.input}
                       defaultValue={detailsDefaults.liveTiming}
                     />
+                  </div>
+                  <div>
+                    <label className={ui.label} htmlFor="eventSlug">
+                      Domain name
+                    </label>
+                    <div className={styles.fieldHint}>
+                      Ex: raviwedsrani — lowercase letters and numbers, no spaces
+                    </div>
+                    <DomainSlugInput defaultValue={slug} disabled={Boolean(raw.isPublished)} />
                   </div>
                   <div>
                     <label className={ui.label} htmlFor="location">
@@ -386,37 +404,18 @@ export async function CreateEventWizard({
                   <div className={ui.label} style={{ marginBottom: 10 }}>
                     Design
                   </div>
-                  <div className={styles.themeGrid}>
-                    {availableThemes.map((t) => {
-                      const id = t._id || t.slug;
-                      const checked = raw.themeId === id;
-                      return (
-                        <label
-                          key={id}
-                          className={`${styles.themeCard} ${checked ? styles.themeCardActive : ""}`}
-                        >
-                          <input
-                            type="radio"
-                            name="themeId"
-                            value={id}
-                            defaultChecked={checked}
-                            style={{ display: "none" }}
-                          />
-                          <ThemePreviewImage
-                            previewUrl={t.previewImage}
-                            name={t.name}
-                            className={styles.themeStripe}
-                            fallbackColors={{
-                              stripe1: t.stripe1,
-                              stripe2: t.stripe2,
-                              primary: t.primary,
-                            }}
-                          />
-                          <div className={styles.themeName}>{t.name}</div>
-                        </label>
-                      );
-                    })}
-                  </div>
+                  <RememberThemeGrid
+                    name="themeId"
+                    selectedId={raw.themeId}
+                    themes={availableThemes.map((t) => ({
+                      id: t._id || t.slug,
+                      name: t.name,
+                      previewImage: t.previewImage,
+                      stripe1: t.stripe1,
+                      stripe2: t.stripe2,
+                      primary: t.primary,
+                    }))}
+                  />
                 </div>
               )}
 
@@ -472,6 +471,11 @@ export async function CreateEventWizard({
               backHref={wizardStepUrl(kind, fromCustomer ? 1 : themeStep, eventId, customerExtra)}
               hiddenFields={wizardHiddenFields}
               submitLabel="Next"
+              kind={kind}
+              youtubeChannels={youtube.channels.map((ch) => ({
+                id: ch.id,
+                channelName: ch.channelName,
+              }))}
               description={
                 fromCustomer
                   ? `Review content copied from the customer invitation for ${selectedTheme.name}. Add YouTube live details if needed.`
