@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import ui from "@/components/ui.module.css";
 import { eventTypeOptions } from "@/lib/data";
-import { filterThemesForWizardKind } from "@/lib/event-kind";
+import { filterThemesForEventType, filterThemesForWizardKind } from "@/lib/event-kind";
 import {
   type EventWizardKind,
   creationFeeForKind,
@@ -30,7 +30,6 @@ import { PreviewEventButton } from "@/components/PreviewEventButton";
 import { resolveWizardThemeFields } from "@/lib/theme-config";
 import { withResolvedThemeSectionToggles } from "@/lib/theme-section-toggles";
 import { ThemeContentEditor } from "@/app/vendor/events/ThemeContentEditor";
-import { normalizeTimeForInput } from "@/lib/time-input";
 import type { VendorThemePreview } from "@/lib/theme-preview-payload";
 import {
   buildPublicEventPathUrl,
@@ -42,6 +41,7 @@ import {
   CopyLinkButton,
   DomainSlugInput,
   EventPageQr,
+  LiveDateAndTimingFields,
   RememberThemeGrid,
 } from "./WizardClient";
 import { PaymentStepClient } from "./PaymentStepClient";
@@ -128,7 +128,6 @@ export async function CreateEventWizard({
         )
       : null;
 
-  const availableThemes = filterThemesForWizardKind(themes, kind);
   const eventCreationFee = creationFeeForKind(profile, kind);
 
   const raw = (record?.raw ?? {}) as {
@@ -152,6 +151,11 @@ export async function CreateEventWizard({
     }[];
   };
 
+  const availableThemes = filterThemesForEventType(
+    filterThemesForWizardKind(themes, kind),
+    raw.eventType,
+    raw.themeId
+  );
   const slug = raw.eventSlug || "";
   const publicUrl =
     kind === "invitation"
@@ -193,7 +197,7 @@ export async function CreateEventWizard({
     eventDate: raw.eventDate ? new Date(raw.eventDate).toISOString().slice(0, 10) : "",
     pageTitle: raw.pageTitle ?? "",
     location: raw.location ?? "",
-    liveTiming: normalizeTimeForInput(String(raw.liveTiming ?? "")),
+    liveTiming: String(raw.liveTiming ?? ""),
     coverImage: raw.coverImage ?? "",
     customerId: raw.customerId ?? customerQuery.customerId ?? "",
   };
@@ -250,20 +254,27 @@ export async function CreateEventWizard({
               <input type="hidden" name="customerId" value={String(detailsDefaults.customerId)} />
             ) : null}
             <div className={styles.formGrid}>
-              <div>
-                <label className={ui.label} htmlFor="eventName">
-                  {detailsLabel}
-                </label>
-                <input
-                  id="eventName"
-                  name="eventName"
-                  className={ui.input}
-                  placeholder={detailsPlaceholder}
-                  required
-                  minLength={2}
-                  defaultValue={detailsDefaults.eventName}
+              {kind === "live" ? (
+                <LiveDateAndTimingFields
+                  defaultDate={detailsDefaults.eventDate}
+                  defaultTiming={detailsDefaults.liveTiming}
                 />
-              </div>
+              ) : (
+                <div>
+                  <label className={ui.label} htmlFor="eventName">
+                    {detailsLabel}
+                  </label>
+                  <input
+                    id="eventName"
+                    name="eventName"
+                    className={ui.input}
+                    placeholder={detailsPlaceholder}
+                    required
+                    minLength={2}
+                    defaultValue={detailsDefaults.eventName}
+                  />
+                </div>
+              )}
 
               <div>
                 <label className={ui.label} htmlFor="eventType">
@@ -283,19 +294,21 @@ export async function CreateEventWizard({
                 </select>
               </div>
 
-              <div>
-                <label className={ui.label} htmlFor="eventDate">
-                  Event date
-                </label>
-                <input
-                  id="eventDate"
-                  name="eventDate"
-                  type="date"
-                  className={ui.input}
-                  required
-                  defaultValue={detailsDefaults.eventDate}
-                />
-              </div>
+              {kind !== "live" ? (
+                <div>
+                  <label className={ui.label} htmlFor="eventDate">
+                    Event date
+                  </label>
+                  <input
+                    id="eventDate"
+                    name="eventDate"
+                    type="date"
+                    className={ui.input}
+                    required
+                    defaultValue={detailsDefaults.eventDate}
+                  />
+                </div>
+              ) : null}
 
               <div>
                 <label className={ui.label} htmlFor="pageTitle">
@@ -307,6 +320,7 @@ export async function CreateEventWizard({
                   className={ui.input}
                   placeholder="Rahul Weds Priya"
                   required
+                  minLength={2}
                   defaultValue={detailsDefaults.pageTitle}
                 />
               </div>
@@ -318,18 +332,6 @@ export async function CreateEventWizard({
 
               {kind === "live" ? (
                 <>
-                  <div>
-                    <label className={ui.label} htmlFor="liveTiming">
-                      Live event timings
-                    </label>
-                    <input
-                      id="liveTiming"
-                      name="liveTiming"
-                      type="time"
-                      className={ui.input}
-                      defaultValue={detailsDefaults.liveTiming}
-                    />
-                  </div>
                   <div>
                     <label className={ui.label} htmlFor="eventSlug">
                       Domain name

@@ -31,6 +31,25 @@ export function filterThemesForWizardKind<
   });
 }
 
+/**
+ * Legacy flow: the design list follows the chosen event type. Themes opt in via admin
+ * `config.eventTypes`; a theme with no event types is shown for every type. The currently
+ * selected theme is always kept, and if nothing matches the full list is returned.
+ */
+export function filterThemesForEventType<
+  T extends { _id?: string; config?: { eventTypes?: unknown } },
+>(themes: T[], eventType?: string | null, keepThemeId?: string | null): T[] {
+  const wanted = eventType?.trim().toLowerCase();
+  if (!wanted) return themes;
+  const matches = themes.filter((theme) => {
+    if (keepThemeId && theme._id === keepThemeId) return true;
+    const types = Array.isArray(theme.config?.eventTypes) ? theme.config.eventTypes : [];
+    if (!types.length) return true;
+    return types.some((t) => String(t).trim().toLowerCase() === wanted);
+  });
+  return matches.length ? matches : themes;
+}
+
 export function buildThemeLayoutMap(
   themes: { _id?: string; layout?: string; config?: { layout?: string } }[]
 ) {

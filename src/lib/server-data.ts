@@ -465,6 +465,7 @@ export async function fetchThemes() {
       layout?: string;
       fields?: unknown[];
       sections?: Record<string, boolean>;
+      eventTypes?: string[];
     };
   };
 

@@ -133,12 +133,14 @@ function customerWizardParamsFromForm(formData: FormData) {
 
 export async function submitEventDetails(formData: FormData) {
   const kind = wizardKindFromForm(formData);
-  const eventName = String(formData.get("eventName") ?? "").trim();
+  const pageTitle = optionalStr(formData, "pageTitle");
+  // Live events have no separate name field (legacy form) — the page title is the event name.
+  const eventName =
+    kind === "live" && pageTitle ? pageTitle : String(formData.get("eventName") ?? "").trim();
   const eventType = optionalStr(formData, "eventType");
   const eventDate = optionalStr(formData, "eventDate");
   const liveTiming = optionalStr(formData, "liveTiming");
   const location = optionalStr(formData, "location");
-  const pageTitle = optionalStr(formData, "pageTitle");
   const coverImage = optionalStr(formData, "coverImage");
   const customerId = optionalStr(formData, "customerId");
   const eventId = optionalStr(formData, "eventId");

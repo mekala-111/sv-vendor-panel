@@ -441,6 +441,83 @@ export function SubEventsField({
   );
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function formatTiming12h(hhmm: string) {
+  const [h, m] = hhmm.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
+/** Legacy default: "Live Starts on 13 Oct, 2026 from 6:00 PM IST Onwards". */
+function defaultLiveTimingText(date: string, time = "18:00") {
+  const match = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+  const [, y, mo, d] = match;
+  return `Live Starts on ${Number(d)} ${MONTHS[Number(mo) - 1]}, ${y} from ${formatTiming12h(time)} IST Onwards`;
+}
+
+/**
+ * Event date + free-text live timings. The timing text follows the date until the vendor edits it.
+ * Older events stored a bare "HH:MM"; those are expanded into the sentence.
+ */
+export function LiveDateAndTimingFields({
+  defaultDate = "",
+  defaultTiming = "",
+}: {
+  defaultDate?: string;
+  defaultTiming?: string;
+}) {
+  const [date, setDate] = useState(defaultDate);
+  const [timing, setTiming] = useState(() => {
+    const stored = defaultTiming.trim();
+    if (/^\d{2}:\d{2}$/.test(stored)) return defaultLiveTimingText(defaultDate, stored) || stored;
+    return stored || defaultLiveTimingText(defaultDate);
+  });
+  const [edited, setEdited] = useState(() => {
+    const stored = defaultTiming.trim();
+    return Boolean(stored) && !/^\d{2}:\d{2}$/.test(stored);
+  });
+
+  return (
+    <>
+      <div>
+        <label className={ui.label} htmlFor="eventDate">
+          Event date
+        </label>
+        <input
+          id="eventDate"
+          name="eventDate"
+          type="date"
+          className={ui.input}
+          required
+          value={date}
+          onChange={(e) => {
+            setDate(e.target.value);
+            if (!edited) setTiming(defaultLiveTimingText(e.target.value));
+          }}
+        />
+      </div>
+      <div>
+        <label className={ui.label} htmlFor="liveTiming">
+          Live event timings
+        </label>
+        <input
+          id="liveTiming"
+          name="liveTiming"
+          className={ui.input}
+          placeholder="Live Starts on 13 Oct, 2026 from 6:00 PM IST Onwards"
+          value={timing}
+          onChange={(e) => {
+            setTiming(e.target.value);
+            setEdited(e.target.value.trim() !== "");
+          }}
+        />
+      </div>
+    </>
+  );
+}
+
 export function DomainSlugInput({
   name = "eventSlug",
   defaultValue = "",
