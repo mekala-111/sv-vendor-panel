@@ -37,7 +37,7 @@ function wizardKindFromForm(formData: FormData): EventWizardKind {
   return parseWizardKind(String(formData.get("wizardKind") ?? ""));
 }
 
-function wizardRedirect(kind: EventWizardKind, params: Record<string, string | undefined>) {
+function wizardRedirect(kind: EventWizardKind, params: Record<string, string | undefined>): never {
   redirect(q(wizardBasePath(kind), params));
 }
 
@@ -414,4 +414,61 @@ export async function submitQrEventPayment(payload: {
 }) {
   const { submitEventCreationPaymentAction } = await import("./server-data");
   return submitEventCreationPaymentAction(payload);
+}
+
+/**
+ * Single-page "Create Live Event" (legacy eLive form order). Creates the event, applies the
+ * design and saves all content in one go, then opens the payment step.
+ * Errors before the event exists come back to the page (so typed data and images are kept);
+ * once it exists, the vendor is sent to the wizard step to fix things instead of re-creating it.
+ */
+export async function submitLiveEventSinglePage(formData: FormData): Promise<{ error: string }> {
+  const pageTitle = optionalStr(formData, "pageTitle");
+  const eventDate = optionalStr(formData, "eventDate");
+  const themeId = optionalStr(formData, "themeId");
+  const eventSlug = optionalStr(formData, "eventSlug")
+    ?.toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  if (!eventDate) return { error: "Please select the event date." };
+  if (!pageTitle || pageTitle.length < 2) return { error: "Please enter the page title (e.g. Ravi weds Rani)." };
+  if (!eventSlug || eventSlug.length < 2) return { error: "Please enter a domain name (e.g. raviwedsrani)." };
+  const whatsappNumber = optionalStr(formData, "whatsappNumber");
+  if (whatsappNumber && !/^\d{10}$/.test(whatsappNumber.replace(/\D/g, ""))) {
+    return { error: "Please enter a valid 10-digit WhatsApp number." };
+  }
+
+  let eventId: string;
+  try {
+    const created = await createEventAction({
+      eventName: pageTitle,
+      pageTitle,
+      eventDate,
+      eventSlug,
+      showWatchLive: true,
+      ...(optionalStr(formData, "eventType") ? { eventType: optionalStr(formData, "eventType") } : {}),
+      ...(optionalStr(formData, "liveTiming") ? { liveTiming: optionalStr(formData, "liveTiming") } : {}),
+    });
+    eventId = created.id;
+  } catch (err) {
+    rethrowRedirect(err);
+    const message = stepErrorMsg(err) || "Could not create the event.";
+    return { error: /slug|duplicate|exists/i.test(message) ? `That domain name is taken — try another. (${message})` : message };
+  }
+
+  try {
+    if (themeId) {
+      await setEventThemeAction(eventId, { themeId });
+      await updateEventAction(eventId, { themeId, showWatchLive: true });
+    }
+    const content = buildThemeContentPayload(formData, "live");
+    if (Object.keys(content).length) await updateEventAction(eventId, content);
+  } catch (err) {
+    rethrowRedirect(err);
+    wizardRedirect("live", { step: "3", eventId, error: "1", msg: stepErrorMsg(err) });
+  }
+
+  wizardRedirect("live", { step: "4", eventId });
 }
