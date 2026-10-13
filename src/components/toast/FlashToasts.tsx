@@ -75,7 +75,9 @@ export function FlashToasts() {
     for (const key of FLASH_KEYS) {
       const raw = searchParams.get(key);
       if (!raw) continue;
-      const mapped = messageFor(key, raw);
+      // Wizard steps send the backend's reason as `msg` alongside error=1 — show that, not the generic text.
+      const detail = key === "error" ? searchParams.get("msg")?.trim() : "";
+      const mapped = detail ? { text: detail, kind: "error" as const } : messageFor(key, raw);
       if (!mapped) continue;
       if (mapped.kind === "success") toast.success(mapped.text);
       else if (mapped.kind === "error") toast.error(mapped.text);
@@ -86,6 +88,7 @@ export function FlashToasts() {
 
     const next = new URLSearchParams(searchParams.toString());
     for (const key of shown) next.delete(key);
+    if (shown.includes("error")) next.delete("msg");
     const qs = next.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [pathname, router, searchParams]);

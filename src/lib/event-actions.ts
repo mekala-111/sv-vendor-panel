@@ -45,6 +45,13 @@ function detailPath(kind: EventWizardKind, id: string) {
   return kind === "invitation" ? `/vendor/invitations/${id}` : `/vendor/events/${id}`;
 }
 
+/** Backend error text for the wizard's error popup (`msg`), or session redirect when the login expired. */
+function stepErrorMsg(err: unknown): string | undefined {
+  const message = err instanceof Error ? err.message : "";
+  if (isAuthSessionError(message)) redirect("/login?error=session");
+  return message ? message.slice(0, 240) : undefined;
+}
+
 /** Next.js `redirect()` throws; must not be swallowed by try/catch. */
 function rethrowRedirect(err: unknown) {
   if (
@@ -154,7 +161,12 @@ export async function submitEventDetails(formData: FormData) {
     .replace(/^-+|-+$/g, "");
 
   if (eventName.length < 2) {
-    wizardRedirect(kind, { step: "1", eventId, error: "1" });
+    wizardRedirect(kind, {
+      step: "1",
+      eventId,
+      error: "1",
+      msg: kind === "live" ? "Enter a page title (at least 2 characters)." : "Enter a name (at least 2 characters).",
+    });
   }
 
   try {
@@ -233,7 +245,7 @@ export async function submitThemeStep(formData: FormData) {
     }
   } catch (err) {
     rethrowRedirect(err);
-    wizardRedirect(kind, { step: kind === "live" ? "2" : "2", eventId, error: "1" });
+    wizardRedirect(kind, { step: "2", eventId, error: "1", msg: stepErrorMsg(err) });
   }
 
   wizardRedirect(kind, { step: kind === "live" ? "3" : "3", eventId });
@@ -315,9 +327,10 @@ export async function submitThemeContentStep(formData: FormData) {
   } catch (err) {
     rethrowRedirect(err);
     wizardRedirect(kind, {
-      step: kind === "live" ? "3" : "3",
+      step: "3",
       eventId,
       error: "1",
+      msg: stepErrorMsg(err),
       ...customerWizardParamsFromForm(formData),
     });
   }
@@ -341,7 +354,7 @@ export async function submitEventPageStep(formData: FormData) {
 
   if (!eventId) wizardRedirect(kind, { step: "1", error: "1" });
   if (!eventSlug) {
-    wizardRedirect(kind, { step: "4", eventId, error: "1" });
+    wizardRedirect(kind, { step: "4", eventId, error: "1", msg: "Enter a domain name for the page." });
   }
 
   try {
@@ -352,7 +365,7 @@ export async function submitEventPageStep(formData: FormData) {
     }
   } catch (err) {
     rethrowRedirect(err);
-    wizardRedirect(kind, { step: "4", eventId, error: "1" });
+    wizardRedirect(kind, { step: "4", eventId, error: "1", msg: stepErrorMsg(err) });
   }
 
   wizardRedirect(kind, { step: "5", eventId });
@@ -373,7 +386,12 @@ export async function submitPublishStep(formData: FormData) {
     }
   } catch (err) {
     rethrowRedirect(err);
-    wizardRedirect(kind, { step: kind === "live" ? "4" : "5", eventId, error: "pay" });
+    wizardRedirect(kind, {
+      step: kind === "live" ? "4" : "5",
+      eventId,
+      error: "pay",
+      msg: stepErrorMsg(err),
+    });
   }
 }
 
