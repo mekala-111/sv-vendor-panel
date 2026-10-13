@@ -105,6 +105,7 @@ const LAYOUT_FIELDS: Record<string, ThemeFieldDef[]> = {
   cinematic: LIVE_EVENT_FIELDS,
   classic: LIVE_EVENT_FIELDS,
   "traditional-streaming": LIVE_EVENT_FIELDS,
+  "event-banner": LIVE_EVENT_FIELDS,
 };
 
 const LAYOUT_SECTIONS: Record<string, ThemeSections> = {
@@ -115,6 +116,7 @@ const LAYOUT_SECTIONS: Record<string, ThemeSections> = {
   cinematic: LIVE_SECTIONS,
   classic: LIVE_SECTIONS,
   "traditional-streaming": LIVE_SECTIONS,
+  "event-banner": LIVE_SECTIONS,
 };
 
 export function resolveThemeFields(theme?: {

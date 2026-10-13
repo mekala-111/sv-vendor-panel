@@ -1,7 +1,7 @@
 import type { EventWizardKind } from "./event-wizard";
 
 /** Layouts intended for live streaming — hidden from invitation wizard. */
-const LIVE_STREAMING_LAYOUTS = new Set(["cinematic", "classic", "traditional-streaming"]);
+const LIVE_STREAMING_LAYOUTS = new Set(["cinematic", "classic", "traditional-streaming", "event-banner"]);
 
 function isLiveStreamingLayout(layout: string) {
   if (!layout) return false;
