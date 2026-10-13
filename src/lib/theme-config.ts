@@ -62,6 +62,20 @@ export const LIVE_EVENT_FIELDS: ThemeFieldDef[] = [
   { key: "customImage", label: "Custom image", type: "image", hint: "Height 800px · under 500KB" },
 ];
 
+/** Showcase live-stream cards: the cover image is the framed photo. */
+export const SHOWCASE_FIELDS: ThemeFieldDef[] = [
+  { key: "pageTitle", label: "Names / title (shown above LIVE STREAM)", type: "text", placeholder: "Ravi weds Rani" },
+  { key: "eventDate", label: "Event date", type: "date" },
+  { key: "eventTime", label: "Event time", type: "time" },
+  { key: "eventPlace", label: "Venue", type: "text", placeholder: "City or venue" },
+  { key: "coverImage", label: "Main photo (shown in the frame)", type: "image", hint: "Couple / host photo · JPEG/PNG/WebP" },
+  { key: "customImage", label: "Player poster", type: "image", hint: "Shown on the player before it starts" },
+  { key: "remarks1", label: "Thank-you message", type: "textarea", placeholder: "Thank you for being a part of our special day." },
+  { key: "scrollMessage", label: "Ticker message", type: "textarea", placeholder: "Welcome message" },
+  { key: "galleryImages", label: "Gallery images", type: "gallery", maxItems: 12 },
+  { key: "logoImage", label: "Logo", type: "image", hint: "JPEG/PNG" },
+];
+
 /** Appended to theme content for live events (wizard + event detail). */
 export const LIVE_YOUTUBE_FIELDS: ThemeFieldDef[] = [
   {
@@ -106,6 +120,7 @@ const LAYOUT_FIELDS: Record<string, ThemeFieldDef[]> = {
   classic: LIVE_EVENT_FIELDS,
   "traditional-streaming": LIVE_EVENT_FIELDS,
   "event-banner": LIVE_EVENT_FIELDS,
+  showcase: SHOWCASE_FIELDS,
 };
 
 const LAYOUT_SECTIONS: Record<string, ThemeSections> = {
@@ -117,6 +132,7 @@ const LAYOUT_SECTIONS: Record<string, ThemeSections> = {
   classic: LIVE_SECTIONS,
   "traditional-streaming": LIVE_SECTIONS,
   "event-banner": LIVE_SECTIONS,
+  showcase: LIVE_SECTIONS,
 };
 
 export function resolveThemeFields(theme?: {
