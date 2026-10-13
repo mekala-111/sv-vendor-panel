@@ -6,14 +6,6 @@ import { TONES, statusTone } from "./data";
 export { statusTone, TONES };
 export type { StatusTone };
 
-type BackendCustomer = {
-  id: string;
-  name: string;
-  email?: string | null;
-  status: string;
-  createdAt?: string;
-};
-
 type BackendEvent = {
   id: string;
   eventName: string;
